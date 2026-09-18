@@ -1,0 +1,26 @@
+{
+  "name": "innerlevel-sync",
+  "version": "0.1.0",
+  "description": "Capture Obsidian notes as InnerLevel action cards",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "verify": "node scripts/verify-logic.mjs"
+  },
+  "keywords": [
+    "obsidian-plugin",
+    "innerlevel"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "builtin-modules": "^4.0.0",
+    "esbuild": "^0.25.0",
+    "obsidian": "latest",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0"
+  }
+}

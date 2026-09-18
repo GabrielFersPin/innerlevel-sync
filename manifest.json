@@ -1,0 +1,9 @@
+{
+  "id": "innerlevel-sync",
+  "name": "InnerLevel Sync",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Capture notes and today's due Zettelkasten reviews as InnerLevel action cards.",
+  "author": "Gabriel Fernandes Pinheiro",
+  "isDesktopOnly": true
+}
