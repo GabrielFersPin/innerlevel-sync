@@ -1,0 +1,9 @@
+{
+  "id": "innerlevel-sync",
+  "name": "InnerLevel Sync",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Sync Segundo_Cerebro captures and due SRS notes to InnerLevel.",
+  "author": "GabrielFersPin",
+  "isDesktopOnly": false
+}
