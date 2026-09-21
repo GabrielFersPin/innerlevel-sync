@@ -35,8 +35,20 @@ export default class InnerLevelSyncPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => { void this.syncAutomatically(); });
   }
 
-  async loadSettings(): Promise<void> { this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData()); }
-  async saveSettings(): Promise<void> { this.client = null; await this.saveData(this.settings); }
+  async loadSettings(): Promise<void> {
+    const stored = await this.loadData() || {};
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, stored, { password: '' });
+    const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
+    const cleaned = Object.fromEntries(Object.entries(stored).filter(([key]) => !key.startsWith('sb_') || key === currentAuthKey));
+    await this.saveData({ ...cleaned, ...this.settings });
+  }
+  async saveSettings(): Promise<void> {
+    this.client = null;
+    const stored = await this.loadData() || {};
+    const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
+    const authData = Object.fromEntries(Object.entries(stored).filter(([key]) => !key.startsWith('sb_') || key === currentAuthKey));
+    await this.saveData({ ...authData, ...this.settings, password: '' });
+  }
 
   private async getClient(): Promise<SupabaseClient> {
     if (!this.settings.supabaseUrl || !this.settings.supabaseAnonKey) throw new Error('Configura Supabase URL y anon key en los ajustes del plugin.');
@@ -182,6 +194,10 @@ class InnerLevelSettingTab extends PluginSettingTab {
 }
 
 function isoToday(): string { return new Date().toISOString().slice(0, 10); }
+function authStorageKey(url: string): string {
+  const ref = url.match(/^https:\/\/([^.]+)\.supabase\.co/)?.[1] || '';
+  return `sb_sb-${ref}-auth-token`;
+}
 function stableId(path: string): string { return path.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 function slug(value: string): string { return stableId(value); }
 function firstMeaningfulParagraph(body: string): string { return body.split(/\n\s*\n/).map(part => part.replace(/^#+\s*/, '').trim()).find(Boolean)?.slice(0, 500) || ''; }

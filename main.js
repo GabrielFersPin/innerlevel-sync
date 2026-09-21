@@ -20822,11 +20822,18 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
     });
   }
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const stored = await this.loadData() || {};
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, stored, { password: "" });
+    const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
+    const cleaned = Object.fromEntries(Object.entries(stored).filter(([key]) => !key.startsWith("sb_") || key === currentAuthKey));
+    await this.saveData({ ...cleaned, ...this.settings });
   }
   async saveSettings() {
     this.client = null;
-    await this.saveData(this.settings);
+    const stored = await this.loadData() || {};
+    const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
+    const authData = Object.fromEntries(Object.entries(stored).filter(([key]) => !key.startsWith("sb_") || key === currentAuthKey));
+    await this.saveData({ ...authData, ...this.settings, password: "" });
   }
   async getClient() {
     if (!this.settings.supabaseUrl || !this.settings.supabaseAnonKey) throw new Error("Configura Supabase URL y anon key en los ajustes del plugin.");
@@ -20995,6 +21002,11 @@ var InnerLevelSettingTab = class extends import_obsidian.PluginSettingTab {
 };
 function isoToday() {
   return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+}
+function authStorageKey(url) {
+  var _a;
+  const ref = ((_a = url.match(/^https:\/\/([^.]+)\.supabase\.co/)) == null ? void 0 : _a[1]) || "";
+  return `sb_sb-${ref}-auth-token`;
 }
 function stableId(path) {
   return path.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
