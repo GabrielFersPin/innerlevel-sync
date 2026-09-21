@@ -9,11 +9,14 @@ interface InnerLevelSettings {
   defaultDuration: number;
   defaultEnergyCost: number;
   dashboardPath: string;
+  autoSyncToday: boolean;
+  autoSyncLastRun?: string;
 }
 
 const DEFAULT_SETTINGS: InnerLevelSettings = {
   supabaseUrl: '', supabaseAnonKey: '', email: '', password: '',
   defaultDuration: 0.5, defaultEnergyCost: 15, dashboardPath: 'Dashboard_General.md',
+  autoSyncToday: false,
 };
 const DUE_TYPES = new Set(['tecnica', 'nota_estudio', 'captura_rapida', 'permanente', 'problema']);
 const ARCHIVED_STATUS = '🎉 Completado / Archivado';
@@ -29,6 +32,7 @@ export default class InnerLevelSyncPlugin extends Plugin {
     this.addCommand({ id: 'sync-due-today', name: "Sync today's due notes", callback: () => this.syncDueNotes() });
     this.addCommand({ id: 'resync-due-today', name: "Resync today's due notes", callback: () => this.syncDueNotes(true) });
     this.addCommand({ id: 'open-innerlevel', name: 'Open InnerLevel', callback: () => window.open('https://inner-level-app.vercel.app/', '_blank') });
+    this.app.workspace.onLayoutReady(() => { void this.syncAutomatically(); });
   }
 
   async loadSettings(): Promise<void> { this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData()); }
@@ -83,7 +87,16 @@ export default class InnerLevelSyncPlugin extends Plugin {
     } catch (error) { this.reportError(error); }
   }
 
-  private async syncDueNotes(force = false): Promise<void> {
+  private async syncAutomatically(): Promise<void> {
+    if (!this.settings.autoSyncToday || this.settings.autoSyncLastRun === isoToday()) return;
+    const synced = await this.syncDueNotes();
+    if (synced) {
+      this.settings.autoSyncLastRun = isoToday();
+      await this.saveSettings();
+    }
+  }
+
+  private async syncDueNotes(force = false): Promise<boolean> {
     try {
       const client = await this.ensureSession();
       const today = isoToday();
@@ -102,8 +115,10 @@ export default class InnerLevelSyncPlugin extends Plugin {
         await this.markSynced(file, card.id, today);
         synced += 1;
       }
-      new Notice(synced ? `Sincronizadas ${synced} notas para hoy.` : 'Las notas pendientes ya estaban sincronizadas hoy.');
-    } catch (error) { this.reportError(error); }
+      if (synced) new Notice(`Sincronizadas ${synced} notas para hoy.`);
+      else if (!force) new Notice('Las notas pendientes ya estaban sincronizadas hoy.');
+      return true;
+    } catch (error) { this.reportError(error); return false; }
   }
 
   private makeCard(id: string, name: string, description: string, frontmatter: Record<string, unknown>, baseTags: string[]): { id: string; [key: string]: unknown } {
@@ -153,6 +168,7 @@ class InnerLevelSettingTab extends PluginSettingTab {
       .setName('Connection')
       .setDesc('Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos.')
       .addButton(button => button.setButtonText('Sign in / test').setCta().onClick(() => this.plugin.testConnection()));
+      new Setting(containerEl).setName('Automatic daily sync').setDesc('Sincroniza una vez al abrir Obsidian, después de cargar el vault.').addToggle(toggle => toggle.setValue(this.plugin.settings.autoSyncToday).onChange(async value => { this.plugin.settings.autoSyncToday = value; await this.plugin.saveSettings(); }));
     new Setting(containerEl).setName('Default duration (hours)').addText(text => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async value => { this.plugin.settings.defaultDuration = Number(value) || DEFAULT_SETTINGS.defaultDuration; await this.plugin.saveSettings(); }));
     new Setting(containerEl).setName('Default energy cost').addText(text => text.setValue(String(this.plugin.settings.defaultEnergyCost)).onChange(async value => { this.plugin.settings.defaultEnergyCost = Number(value) || DEFAULT_SETTINGS.defaultEnergyCost; await this.plugin.saveSettings(); }));
   }

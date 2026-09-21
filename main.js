@@ -20800,7 +20800,8 @@ var DEFAULT_SETTINGS = {
   password: "",
   defaultDuration: 0.5,
   defaultEnergyCost: 15,
-  dashboardPath: "Dashboard_General.md"
+  dashboardPath: "Dashboard_General.md",
+  autoSyncToday: false
 };
 var DUE_TYPES = /* @__PURE__ */ new Set(["tecnica", "nota_estudio", "captura_rapida", "permanente", "problema"]);
 var ARCHIVED_STATUS = "\u{1F389} Completado / Archivado";
@@ -20816,6 +20817,9 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
     this.addCommand({ id: "sync-due-today", name: "Sync today's due notes", callback: () => this.syncDueNotes() });
     this.addCommand({ id: "resync-due-today", name: "Resync today's due notes", callback: () => this.syncDueNotes(true) });
     this.addCommand({ id: "open-innerlevel", name: "Open InnerLevel", callback: () => window.open("https://inner-level-app.vercel.app/", "_blank") });
+    this.app.workspace.onLayoutReady(() => {
+      void this.syncAutomatically();
+    });
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -20883,6 +20887,14 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
       this.reportError(error);
     }
   }
+  async syncAutomatically() {
+    if (!this.settings.autoSyncToday || this.settings.autoSyncLastRun === isoToday()) return;
+    const synced = await this.syncDueNotes();
+    if (synced) {
+      this.settings.autoSyncLastRun = isoToday();
+      await this.saveSettings();
+    }
+  }
   async syncDueNotes(force = false) {
     var _a;
     try {
@@ -20904,9 +20916,12 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
         await this.markSynced(file, card.id, today);
         synced += 1;
       }
-      new import_obsidian.Notice(synced ? `Sincronizadas ${synced} notas para hoy.` : "Las notas pendientes ya estaban sincronizadas hoy.");
+      if (synced) new import_obsidian.Notice(`Sincronizadas ${synced} notas para hoy.`);
+      else if (!force) new import_obsidian.Notice("Las notas pendientes ya estaban sincronizadas hoy.");
+      return true;
     } catch (error) {
       this.reportError(error);
+      return false;
     }
   }
   makeCard(id, name, description, frontmatter, baseTags) {
@@ -20954,6 +20969,10 @@ var InnerLevelSettingTab = class extends import_obsidian.PluginSettingTab {
     this.textSetting(containerEl, "Password", "password");
     this.textSetting(containerEl, "Dashboard path", "dashboardPath");
     new import_obsidian.Setting(containerEl).setName("Connection").setDesc("Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos.").addButton((button) => button.setButtonText("Sign in / test").setCta().onClick(() => this.plugin.testConnection()));
+    new import_obsidian.Setting(containerEl).setName("Automatic daily sync").setDesc("Sincroniza una vez al abrir Obsidian, despu\xE9s de cargar el vault.").addToggle((toggle) => toggle.setValue(this.plugin.settings.autoSyncToday).onChange(async (value) => {
+      this.plugin.settings.autoSyncToday = value;
+      await this.plugin.saveSettings();
+    }));
     new import_obsidian.Setting(containerEl).setName("Default duration (hours)").addText((text) => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async (value) => {
       this.plugin.settings.defaultDuration = Number(value) || DEFAULT_SETTINGS.defaultDuration;
       await this.plugin.saveSettings();
