@@ -20804,8 +20804,20 @@ var DEFAULT_SETTINGS = {
   autoSyncToday: false,
   syncMode: "area"
 };
-var DUE_TYPES = /* @__PURE__ */ new Set(["tecnica", "nota_estudio", "captura_rapida", "permanente", "problema"]);
-var ARCHIVED_STATUS = "\u{1F389} Completado / Archivado";
+var DUE_TYPES = /* @__PURE__ */ new Set([
+  // Spanish
+  "tecnica",
+  "nota_estudio",
+  "captura_rapida",
+  "permanente",
+  "problema",
+  // English
+  "technical",
+  "study_note",
+  "quick_capture",
+  "permanent",
+  "problem"
+]);
 var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
   constructor() {
     super(...arguments);
@@ -20934,7 +20946,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
       if (mode === "area") {
         const areaGroups = /* @__PURE__ */ new Map();
         for (const item of notesToSync) {
-          const areaName = String(item.frontmatter.area || "Sin \xC1rea").trim();
+          const areaName = getArea(item.frontmatter) || "Sin \xC1rea";
           if (!areaGroups.has(areaName)) areaGroups.set(areaName, []);
           areaGroups.get(areaName).push(item);
         }
@@ -20944,12 +20956,12 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
           let maxPriority = 3;
           const noteListLines = [];
           for (const item of items) {
-            const timing = timingFor(String(item.frontmatter["tiempo-repaso"] || item.frontmatter["tiempo-estimado"] || ""), this.settings);
+            const timing = timingFor(getReviewTime(item.frontmatter), this.settings);
             totalDurationHours += timing.duration;
             const prio = priorityFor(item.frontmatter);
             if (prio > maxPriority) maxPriority = prio;
             const durationFormatted = formatDuration(timing.duration);
-            const level = String(item.frontmatter["nivel-comprension"] || "pendiente");
+            const level = getComprehension(item.frontmatter) || "pendiente";
             const link = `obsidian://open?vault=${encodeURIComponent(item.file.vault.getName())}&file=${encodeURIComponent(item.file.path)}`;
             noteListLines.push(`\u2022 ${item.file.basename} (${durationFormatted} | Comprensi\xF3n: ${level})
   ${link}`);
@@ -21009,8 +21021,8 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
     }
   }
   makeCard(id, name, description, frontmatter, baseTags) {
-    const timing = timingFor(String(frontmatter["tiempo-repaso"] || frontmatter["tiempo-estimado"] || ""), this.settings);
-    const area = String(frontmatter.area || "").trim();
+    const timing = timingFor(getReviewTime(frontmatter), this.settings);
+    const area = getArea(frontmatter);
     return { id, name, description, type: "action", rarity: "common", classTypes: ["strategist", "warrior", "creator", "connector", "sage"], energyCost: timing.energyCost, duration: timing.duration, impact: 10, skillBonus: [], requirements: {}, conditions: {}, tags: [...baseTags, ...area ? [slug(area)] : []], createdAt: (/* @__PURE__ */ new Date()).toISOString(), forged: true, usageCount: 0, isOnCooldown: false, priority: priorityFor(frontmatter) };
   }
   async markSynced(file, cardId, today) {
@@ -21053,8 +21065,8 @@ var InnerLevelSettingTab = class extends import_obsidian.PluginSettingTab {
     this.textSetting(containerEl, "Password", "password");
     this.textSetting(containerEl, "Dashboard path", "dashboardPath");
     new import_obsidian.Setting(containerEl).setName("Connection").setDesc("Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos.").addButton((button) => button.setButtonText("Sign in / test").setCta().onClick(() => this.plugin.testConnection()));
-    new import_obsidian.Setting(containerEl).setName("Modo de sincronizaci\xF3n").setDesc("Elige si deseas crear una carta por cada nota individual o agrupar por \xE1rea mostrando el tiempo total acumulado.").addDropdown(
-      (dropdown) => dropdown.addOption("area", "Por \xC1rea (cartas agrupadas con tiempo total)").addOption("individual", "Individual (una carta por nota)").setValue(this.plugin.settings.syncMode || "area").onChange(async (value) => {
+    new import_obsidian.Setting(containerEl).setName("Modo de sincronizaci\xF3n / Sync Mode").setDesc("Elige si deseas crear una carta por cada nota individual o agrupar por \xE1rea mostrando el tiempo total acumulado.").addDropdown(
+      (dropdown) => dropdown.addOption("area", "Por \xC1rea / By Area (cartas agrupadas con tiempo total)").addOption("individual", "Individual (una carta por nota)").setValue(this.plugin.settings.syncMode || "area").onChange(async (value) => {
         this.plugin.settings.syncMode = value;
         await this.plugin.saveSettings();
       })
@@ -21101,18 +21113,65 @@ function firstMeaningfulParagraph(body) {
   var _a;
   return ((_a = body.split(/\n\s*\n/).map((part) => part.replace(/^#+\s*/, "").trim()).find(Boolean)) == null ? void 0 : _a.slice(0, 500)) || "";
 }
+function getFMValue(frontmatter, ...keys) {
+  for (const key of keys) {
+    const val = frontmatter[key];
+    if (val !== void 0 && val !== null && val !== "") {
+      return String(val).trim();
+    }
+  }
+  return "";
+}
+function getNoteType(frontmatter) {
+  return getFMValue(frontmatter, "note_type", "tipo_nota", "type", "tipo");
+}
+function getDueDate(frontmatter) {
+  return getFMValue(frontmatter, "due_date", "next_review", "due", "proxima-revision", "proxima_revision", "proxima_review");
+}
+function getArea(frontmatter) {
+  return getFMValue(frontmatter, "area", "topic", "subject");
+}
+function getStatus(frontmatter) {
+  return getFMValue(frontmatter, "status", "state", "estado");
+}
+function getComprehension(frontmatter) {
+  return getFMValue(frontmatter, "understanding_level", "comprehension_level", "understanding", "comprehension", "nivel-comprension", "nivel_comprension");
+}
+function getReviewTime(frontmatter) {
+  return getFMValue(frontmatter, "review_time", "estimated_time", "duration", "tiempo-repaso", "tiempo_repaso", "tiempo-estimado", "tiempo_estimado");
+}
+function getReviewResult(frontmatter) {
+  return getFMValue(frontmatter, "review_result", "result", "resultado-repaso", "resultado_repaso");
+}
+function getPriority(frontmatter) {
+  return getFMValue(frontmatter, "priority", "prioridad");
+}
 function isDue(frontmatter, today) {
-  const type = String(frontmatter.tipo_nota || "");
-  const due = String(frontmatter["proxima-revision"] || "");
-  const level = String(frontmatter["nivel-comprension"] || "").toUpperCase();
-  return DUE_TYPES.has(type) && Boolean(String(frontmatter.area || "").trim()) && due !== "" && due <= today && String(frontmatter.status || "") !== ARCHIVED_STATUS && level !== "COMPLETADO";
+  const type = getNoteType(frontmatter);
+  const due = getDueDate(frontmatter);
+  const level = getComprehension(frontmatter).toUpperCase();
+  const status = getStatus(frontmatter).toLowerCase();
+  const area = getArea(frontmatter);
+  const isArchived = status === "\u{1F389} completado / archivado" || status === "archived" || status === "completed" || status === "archivado";
+  const isCompleted = level === "COMPLETADO" || level === "COMPLETED";
+  return DUE_TYPES.has(type) && Boolean(area) && due !== "" && due <= today && !isArchived && !isCompleted;
 }
 function dueDescription(file, frontmatter, body) {
-  return [`Area: ${frontmatter.area || ""}`, `Comprension: ${frontmatter["nivel-comprension"] || "pendiente"}`, `Tiempo: ${frontmatter["tiempo-repaso"] || frontmatter["tiempo-estimado"] || "sin estimar"}`, `Obsidian: obsidian://open?vault=${encodeURIComponent(file.vault.getName())}&file=${encodeURIComponent(file.path)}`, "", firstMeaningfulParagraph(body)].join("\n").slice(0, 1500);
+  const area = getArea(frontmatter);
+  const level = getComprehension(frontmatter) || "pendiente";
+  const time = getReviewTime(frontmatter) || "sin estimar";
+  return [
+    `Area: ${area}`,
+    `Comprension: ${level}`,
+    `Tiempo: ${time}`,
+    `Obsidian: obsidian://open?vault=${encodeURIComponent(file.vault.getName())}&file=${encodeURIComponent(file.path)}`,
+    "",
+    firstMeaningfulParagraph(body)
+  ].join("\n").slice(0, 1500);
 }
 function timingFor(value, settings) {
   const normalized = value.trim().toLowerCase().replace(/\s+/g, "");
-  const minutes = normalized.match(/^\+?(\d+(?:\.\d+)?)min(?:utos)?$/);
+  const minutes = normalized.match(/^\+?(\d+(?:\.\d+)?)m(?:in(?:utos)?)?$/);
   const hours = normalized.match(/^\+?(\d+(?:\.\d+)?)h(?:ora?s)?$/);
   const duration = minutes ? Number(minutes[1]) / 60 : hours ? Number(hours[1]) : void 0;
   if (duration !== void 0 && Number.isFinite(duration)) {
@@ -21122,8 +21181,14 @@ function timingFor(value, settings) {
   return { duration: settings.defaultDuration, energyCost: settings.defaultEnergyCost };
 }
 function priorityFor(frontmatter) {
-  const value = `${frontmatter.prioridad || ""} ${frontmatter["nivel-comprension"] || ""} ${frontmatter["resultado-repaso"] || ""}`.toLowerCase();
-  return /❓|🤔|fallado|dificil|difícil/.test(value) ? 4 : /alta|alto/.test(value) ? 4 : /baja|bajo/.test(value) ? 2 : 3;
+  const priority = getPriority(frontmatter).toLowerCase();
+  const level = getComprehension(frontmatter).toLowerCase();
+  const result = getReviewResult(frontmatter).toLowerCase();
+  const value = `${priority} ${level} ${result}`;
+  if (/❓|🤔|fallado|failed|dificil|difícil|difficult|hard/.test(value)) return 4;
+  if (/alta|alto|high/.test(value)) return 4;
+  if (/baja|bajo|low/.test(value)) return 2;
+  return 3;
 }
 function formatDuration(hours) {
   const totalMinutes = Math.round(hours * 60);

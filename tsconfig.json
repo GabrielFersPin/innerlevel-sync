@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "paths": { "obsidian": ["node_modules/obsidian"] },
     "typeRoots": ["node_modules/@types", "node_modules/obsidian"],
     "inlineSourceMap": true,
