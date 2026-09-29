@@ -20824,6 +20824,9 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
       void this.syncAutomatically();
     });
   }
+  onunload() {
+    this.client = null;
+  }
   async loadSettings() {
     const stored = await this.loadData() || {};
     this.settings = Object.assign({}, DEFAULT_SETTINGS, stored, { password: "" });

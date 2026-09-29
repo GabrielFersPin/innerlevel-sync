@@ -41,6 +41,10 @@ export default class InnerLevelSyncPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => { void this.syncAutomatically(); });
   }
 
+  onunload(): void {
+    this.client = null;
+  }
+
   async loadSettings(): Promise<void> {
     const stored = await this.loadData() || {};
     this.settings = Object.assign({}, DEFAULT_SETTINGS, stored, { password: '' });
