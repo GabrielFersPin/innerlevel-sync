@@ -1,6 +1,8 @@
 import { App, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+export type SyncMode = 'individual' | 'area';
+
 interface InnerLevelSettings {
   supabaseUrl: string;
   supabaseAnonKey: string;
@@ -11,12 +13,14 @@ interface InnerLevelSettings {
   dashboardPath: string;
   autoSyncToday: boolean;
   autoSyncLastRun?: string;
+  syncMode: SyncMode;
 }
 
 const DEFAULT_SETTINGS: InnerLevelSettings = {
   supabaseUrl: '', supabaseAnonKey: '', email: '', password: '',
   defaultDuration: 0.5, defaultEnergyCost: 15, dashboardPath: 'Dashboard_General.md',
   autoSyncToday: false,
+  syncMode: 'area',
 };
 const DUE_TYPES = new Set(['tecnica', 'nota_estudio', 'captura_rapida', 'permanente', 'problema']);
 const ARCHIVED_STATUS = '🎉 Completado / Archivado';
@@ -30,6 +34,8 @@ export default class InnerLevelSyncPlugin extends Plugin {
     this.addSettingTab(new InnerLevelSettingTab(this.app, this));
     this.addCommand({ id: 'capture-current-note', name: 'Capture selection / current note', callback: () => this.captureCurrentNote() });
     this.addCommand({ id: 'sync-due-today', name: "Sync today's due notes", callback: () => this.syncDueNotes() });
+    this.addCommand({ id: 'sync-due-today-area', name: "Sync today's due notes (by area)", callback: () => this.syncDueNotes(false, 'area') });
+    this.addCommand({ id: 'sync-due-today-individual', name: "Sync today's due notes (individual)", callback: () => this.syncDueNotes(false, 'individual') });
     this.addCommand({ id: 'resync-due-today', name: "Resync today's due notes", callback: () => this.syncDueNotes(true) });
     this.addCommand({ id: 'open-innerlevel', name: 'Open InnerLevel', callback: () => window.open('https://inner-level-app.vercel.app/', '_blank') });
     this.app.workspace.onLayoutReady(() => { void this.syncAutomatically(); });
@@ -108,27 +114,111 @@ export default class InnerLevelSyncPlugin extends Plugin {
     }
   }
 
-  private async syncDueNotes(force = false): Promise<boolean> {
+  private async syncDueNotes(force = false, modeOverride?: SyncMode): Promise<boolean> {
     try {
       const client = await this.ensureSession();
       const today = isoToday();
+      const mode = modeOverride || this.settings.syncMode || 'area';
       const dueNotes = this.app.vault.getMarkdownFiles().filter(file => {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
         return isDue(frontmatter, today);
       });
-      let synced = 0;
+
+      const notesToSync: { file: TFile; frontmatter: Record<string, unknown>; body: string }[] = [];
       for (const file of dueNotes) {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
         if (!force && frontmatter.innerlevel_last_sync === today) continue;
         const body = await this.app.vault.read(file);
-        const card = this.makeCard(`obsidian-${stableId(file.path)}-${today}`, file.basename, dueDescription(file, frontmatter, body), frontmatter, ['obsidian', 'srs', 'due-today']);
-        const { error } = await client.rpc('append_obsidian_card', { p_card: card });
-        if (error) throw error;
-        await this.markSynced(file, card.id, today);
-        synced += 1;
+        notesToSync.push({ file, frontmatter, body });
       }
-      if (synced) new Notice(`Sincronizadas ${synced} notas para hoy.`);
-      else if (!force) new Notice('Las notas pendientes ya estaban sincronizadas hoy.');
+
+      if (notesToSync.length === 0) {
+        if (!force) new Notice('Las notas pendientes ya estaban sincronizadas hoy.');
+        return true;
+      }
+
+      let syncedCount = 0;
+
+      if (mode === 'area') {
+        const areaGroups = new Map<string, { file: TFile; frontmatter: Record<string, unknown>; body: string }[]>();
+        for (const item of notesToSync) {
+          const areaName = String(item.frontmatter.area || 'Sin Área').trim();
+          if (!areaGroups.has(areaName)) areaGroups.set(areaName, []);
+          areaGroups.get(areaName)!.push(item);
+        }
+
+        for (const [areaName, items] of areaGroups.entries()) {
+          const cardId = `obsidian-area-${slug(areaName)}-${today}`;
+          let totalDurationHours = 0;
+          let maxPriority = 3;
+          const noteListLines: string[] = [];
+
+          for (const item of items) {
+            const timing = timingFor(String(item.frontmatter['tiempo-repaso'] || item.frontmatter['tiempo-estimado'] || ''), this.settings);
+            totalDurationHours += timing.duration;
+            const prio = priorityFor(item.frontmatter);
+            if (prio > maxPriority) maxPriority = prio;
+
+            const durationFormatted = formatDuration(timing.duration);
+            const level = String(item.frontmatter['nivel-comprension'] || 'pendiente');
+            const link = `obsidian://open?vault=${encodeURIComponent(item.file.vault.getName())}&file=${encodeURIComponent(item.file.path)}`;
+            noteListLines.push(`• ${item.file.basename} (${durationFormatted} | Comprensión: ${level})\n  ${link}`);
+          }
+
+          const totalFormatted = formatDuration(totalDurationHours);
+          const energyCost = energyCostForDuration(totalDurationHours, this.settings);
+
+          const cardName = `Repaso Área: ${areaName}`;
+          const cardDescription = [
+            `📚 Área: ${areaName}`,
+            `⏱️ Tiempo total acumulado: ${totalFormatted}`,
+            `📝 Notas a repasar (${items.length}):`,
+            '',
+            ...noteListLines
+          ].join('\n').slice(0, 3000);
+
+          const card = {
+            id: cardId,
+            name: cardName,
+            description: cardDescription,
+            type: 'action',
+            rarity: 'common',
+            classTypes: ['strategist', 'warrior', 'creator', 'connector', 'sage'],
+            energyCost: energyCost,
+            duration: Math.round(totalDurationHours * 100) / 100,
+            impact: Math.min(50, items.length * 10),
+            skillBonus: [],
+            requirements: {},
+            conditions: {},
+            tags: ['obsidian', 'srs', 'due-today', 'area-summary', slug(areaName)],
+            createdAt: new Date().toISOString(),
+            forged: true,
+            usageCount: 0,
+            isOnCooldown: false,
+            priority: maxPriority,
+          };
+
+          const { error } = await client.rpc('append_obsidian_card', { p_card: card });
+          if (error) throw error;
+
+          for (const item of items) {
+            await this.markSynced(item.file, cardId, today);
+            syncedCount += 1;
+          }
+        }
+
+        new Notice(`Sincronizadas ${syncedCount} notas en ${areaGroups.size} área(s).`);
+      } else {
+        for (const item of notesToSync) {
+          const card = this.makeCard(`obsidian-${stableId(item.file.path)}-${today}`, item.file.basename, dueDescription(item.file, item.frontmatter, item.body), item.frontmatter, ['obsidian', 'srs', 'due-today']);
+          const { error } = await client.rpc('append_obsidian_card', { p_card: card });
+          if (error) throw error;
+          await this.markSynced(item.file, card.id, today);
+          syncedCount += 1;
+        }
+        new Notice(`Sincronizadas ${syncedCount} notas individuales para hoy.`);
+      }
+
       return true;
     } catch (error) { this.reportError(error); return false; }
   }
@@ -180,7 +270,19 @@ class InnerLevelSettingTab extends PluginSettingTab {
       .setName('Connection')
       .setDesc('Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos.')
       .addButton(button => button.setButtonText('Sign in / test').setCta().onClick(() => this.plugin.testConnection()));
-      new Setting(containerEl).setName('Automatic daily sync').setDesc('Sincroniza una vez al abrir Obsidian, después de cargar el vault.').addToggle(toggle => toggle.setValue(this.plugin.settings.autoSyncToday).onChange(async value => { this.plugin.settings.autoSyncToday = value; await this.plugin.saveSettings(); }));
+    new Setting(containerEl)
+      .setName('Modo de sincronización')
+      .setDesc('Elige si deseas crear una carta por cada nota individual o agrupar por área mostrando el tiempo total acumulado.')
+      .addDropdown(dropdown => dropdown
+        .addOption('area', 'Por Área (cartas agrupadas con tiempo total)')
+        .addOption('individual', 'Individual (una carta por nota)')
+        .setValue(this.plugin.settings.syncMode || 'area')
+        .onChange(async (value) => {
+          this.plugin.settings.syncMode = value as SyncMode;
+          await this.plugin.saveSettings();
+        })
+      );
+    new Setting(containerEl).setName('Automatic daily sync').setDesc('Sincroniza una vez al abrir Obsidian, después de cargar el vault.').addToggle(toggle => toggle.setValue(this.plugin.settings.autoSyncToday).onChange(async value => { this.plugin.settings.autoSyncToday = value; await this.plugin.saveSettings(); }));
     new Setting(containerEl).setName('Default duration (hours)').addText(text => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async value => { this.plugin.settings.defaultDuration = Number(value) || DEFAULT_SETTINGS.defaultDuration; await this.plugin.saveSettings(); }));
     new Setting(containerEl).setName('Default energy cost').addText(text => text.setValue(String(this.plugin.settings.defaultEnergyCost)).onChange(async value => { this.plugin.settings.defaultEnergyCost = Number(value) || DEFAULT_SETTINGS.defaultEnergyCost; await this.plugin.saveSettings(); }));
   }
@@ -221,3 +323,18 @@ function timingFor(value: string, settings: InnerLevelSettings): { duration: num
   return { duration: settings.defaultDuration, energyCost: settings.defaultEnergyCost };
 }
 function priorityFor(frontmatter: Record<string, unknown>): number { const value = `${frontmatter.prioridad || ''} ${frontmatter['nivel-comprension'] || ''} ${frontmatter['resultado-repaso'] || ''}`.toLowerCase(); return /❓|🤔|fallado|dificil|difícil/.test(value) ? 4 : /alta|alto/.test(value) ? 4 : /baja|bajo/.test(value) ? 2 : 3; }
+function formatDuration(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  if (totalMinutes < 60) return `${totalMinutes} min`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
+function energyCostForDuration(durationHours: number, settings: InnerLevelSettings): number {
+  if (durationHours <= 5 / 60) return 10;
+  if (durationHours <= 15 / 60) return 15;
+  if (durationHours <= 30 / 60) return 20;
+  if (durationHours <= 60 / 60) return 25;
+  if (durationHours <= 120 / 60) return 35;
+  return 50;
+}
