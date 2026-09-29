@@ -3,7 +3,7 @@
   "name": "InnerLevel Sync",
   "version": "0.1.0",
   "minAppVersion": "1.4.0",
-  "description": "Sync Obsidian captures and SRS due notes into gamified InnerLevel action cards.",
+  "description": "Sync note captures and SRS due study notes into gamified InnerLevel action cards.",
   "author": "GabrielFersPin",
   "authorUrl": "https://github.com/GabrielFersPin",
   "isDesktopOnly": false

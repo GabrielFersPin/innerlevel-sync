@@ -51,17 +51,22 @@ export default class InnerLevelSyncPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const stored = await this.loadData() || {};
+    const stored: Record<string, unknown> = (await this.loadData() as Record<string, unknown> | null) || {};
     this.settings = Object.assign({}, DEFAULT_SETTINGS, stored, { password: '' });
     const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
-    const cleaned = Object.fromEntries(Object.entries(stored).filter(([key]) => !key.startsWith('sb_') || key === currentAuthKey));
+    const cleaned = Object.fromEntries(
+      Object.entries(stored).filter(([key]) => !key.startsWith('sb_') || key === currentAuthKey)
+    );
     await this.saveData({ ...cleaned, ...this.settings });
   }
+
   async saveSettings(): Promise<void> {
     this.client = null;
-    const stored = await this.loadData() || {};
+    const stored: Record<string, unknown> = (await this.loadData() as Record<string, unknown> | null) || {};
     const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
-    const authData = Object.fromEntries(Object.entries(stored).filter(([key]) => !key.startsWith('sb_') || key === currentAuthKey));
+    const authData = Object.fromEntries(
+      Object.entries(stored).filter(([key]) => !key.startsWith('sb_') || key === currentAuthKey)
+    );
     await this.saveData({ ...authData, ...this.settings, password: '' });
   }
 
@@ -69,9 +74,21 @@ export default class InnerLevelSyncPlugin extends Plugin {
     if (!this.settings.supabaseUrl || !this.settings.supabaseAnonKey) throw new Error('Configura Supabase URL y anon key en los ajustes del plugin.');
     if (!this.client) {
       const storage = {
-        getItem: async (key: string) => (await this.loadData())?.[`sb_${key}`] ?? null,
-        setItem: async (key: string, value: string) => { const data = await this.loadData() || {}; data[`sb_${key}`] = value; await this.saveData(data); },
-        removeItem: async (key: string) => { const data = await this.loadData() || {}; delete data[`sb_${key}`]; await this.saveData(data); },
+        getItem: async (key: string): Promise<string | null> => {
+          const data = (await this.loadData() as Record<string, unknown> | null) || {};
+          const val = data[`sb_${key}`];
+          return typeof val === 'string' ? val : null;
+        },
+        setItem: async (key: string, value: string): Promise<void> => {
+          const data = (await this.loadData() as Record<string, unknown> | null) || {};
+          data[`sb_${key}`] = value;
+          await this.saveData(data);
+        },
+        removeItem: async (key: string): Promise<void> => {
+          const data = (await this.loadData() as Record<string, unknown> | null) || {};
+          delete data[`sb_${key}`];
+          await this.saveData(data);
+        },
       };
       this.client = createClient(this.settings.supabaseUrl, this.settings.supabaseAnonKey, { auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
     }
@@ -254,7 +271,7 @@ export default class InnerLevelSyncPlugin extends Plugin {
 
   private reportError(error: unknown): void {
     const details = error && typeof error === 'object'
-      ? error as { message?: string; code?: string; details?: string; hint?: string }
+      ? (error as { message?: string; code?: string; details?: string; hint?: string })
       : {};
     const message = [details.message, details.code && `code: ${details.code}`, details.details, details.hint]
       .filter(Boolean)
@@ -266,10 +283,11 @@ export default class InnerLevelSyncPlugin extends Plugin {
 
 class InnerLevelSettingTab extends PluginSettingTab {
   constructor(app: App, private plugin: InnerLevelSyncPlugin) { super(app, plugin); }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl('h2', { text: 'InnerLevel Sync' });
+    new Setting(containerEl).setName('InnerLevel Sync').setHeading();
     this.textSetting(containerEl, 'Supabase URL', 'supabaseUrl');
     this.textSetting(containerEl, 'Supabase anon key', 'supabaseAnonKey');
     this.textSetting(containerEl, 'Email', 'email');
@@ -295,6 +313,7 @@ class InnerLevelSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName('Default duration (hours)').addText(text => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async value => { this.plugin.settings.defaultDuration = Number(value) || DEFAULT_SETTINGS.defaultDuration; await this.plugin.saveSettings(); }));
     new Setting(containerEl).setName('Default energy cost').addText(text => text.setValue(String(this.plugin.settings.defaultEnergyCost)).onChange(async value => { this.plugin.settings.defaultEnergyCost = Number(value) || DEFAULT_SETTINGS.defaultEnergyCost; await this.plugin.saveSettings(); }));
   }
+
   private textSetting(containerEl: HTMLElement, name: string, key: 'supabaseUrl' | 'supabaseAnonKey' | 'email' | 'password' | 'dashboardPath'): void {
     new Setting(containerEl).setName(name).addText(text => {
       text.setValue(this.plugin.settings[key]);

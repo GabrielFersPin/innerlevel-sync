@@ -1,7 +1,7 @@
 {
   "name": "innerlevel-sync",
   "version": "0.1.0",
-  "description": "Obsidian plugin that converts captures and SRS due notes into gamified InnerLevel action cards.",
+  "description": "Sync note captures and SRS due study notes into gamified InnerLevel action cards.",
   "main": "main.js",
   "scripts": {
     "build": "tsc --noEmit && node esbuild.config.mjs production",

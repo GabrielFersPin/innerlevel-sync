@@ -20843,14 +20843,18 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
     const stored = await this.loadData() || {};
     this.settings = Object.assign({}, DEFAULT_SETTINGS, stored, { password: "" });
     const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
-    const cleaned = Object.fromEntries(Object.entries(stored).filter(([key]) => !key.startsWith("sb_") || key === currentAuthKey));
+    const cleaned = Object.fromEntries(
+      Object.entries(stored).filter(([key]) => !key.startsWith("sb_") || key === currentAuthKey)
+    );
     await this.saveData({ ...cleaned, ...this.settings });
   }
   async saveSettings() {
     this.client = null;
     const stored = await this.loadData() || {};
     const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
-    const authData = Object.fromEntries(Object.entries(stored).filter(([key]) => !key.startsWith("sb_") || key === currentAuthKey));
+    const authData = Object.fromEntries(
+      Object.entries(stored).filter(([key]) => !key.startsWith("sb_") || key === currentAuthKey)
+    );
     await this.saveData({ ...authData, ...this.settings, password: "" });
   }
   async getClient() {
@@ -20858,8 +20862,9 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
     if (!this.client) {
       const storage = {
         getItem: async (key) => {
-          var _a, _b;
-          return (_b = (_a = await this.loadData()) == null ? void 0 : _a[`sb_${key}`]) != null ? _b : null;
+          const data = await this.loadData() || {};
+          const val = data[`sb_${key}`];
+          return typeof val === "string" ? val : null;
         },
         setItem: async (key, value) => {
           const data = await this.loadData() || {};
@@ -21058,7 +21063,7 @@ var InnerLevelSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "InnerLevel Sync" });
+    new import_obsidian.Setting(containerEl).setName("InnerLevel Sync").setHeading();
     this.textSetting(containerEl, "Supabase URL", "supabaseUrl");
     this.textSetting(containerEl, "Supabase anon key", "supabaseAnonKey");
     this.textSetting(containerEl, "Email", "email");
