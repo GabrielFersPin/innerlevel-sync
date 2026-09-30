@@ -1,6 +1,6 @@
 {
   "name": "innerlevel-sync",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Sync note captures and SRS due study notes into gamified InnerLevel action cards.",
   "main": "main.js",
   "scripts": {

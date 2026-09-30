@@ -20843,18 +20843,24 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
     const stored = await this.loadData() || {};
     this.settings = Object.assign({}, DEFAULT_SETTINGS, stored, { password: "" });
     const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
-    const cleaned = Object.fromEntries(
-      Object.entries(stored).filter(([key]) => !key.startsWith("sb_") || key === currentAuthKey)
-    );
+    const cleaned = {};
+    for (const key of Object.keys(stored)) {
+      if (!key.startsWith("sb_") || key === currentAuthKey) {
+        cleaned[key] = stored[key];
+      }
+    }
     await this.saveData({ ...cleaned, ...this.settings });
   }
   async saveSettings() {
     this.client = null;
     const stored = await this.loadData() || {};
     const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
-    const authData = Object.fromEntries(
-      Object.entries(stored).filter(([key]) => !key.startsWith("sb_") || key === currentAuthKey)
-    );
+    const authData = {};
+    for (const key of Object.keys(stored)) {
+      if (!key.startsWith("sb_") || key === currentAuthKey) {
+        authData[key] = stored[key];
+      }
+    }
     await this.saveData({ ...authData, ...this.settings, password: "" });
   }
   async getClient() {
@@ -21063,7 +21069,7 @@ var InnerLevelSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    new import_obsidian.Setting(containerEl).setName("InnerLevel Sync").setHeading();
+    new import_obsidian.Setting(containerEl).setName("General Settings").setHeading();
     this.textSetting(containerEl, "Supabase URL", "supabaseUrl");
     this.textSetting(containerEl, "Supabase anon key", "supabaseAnonKey");
     this.textSetting(containerEl, "Email", "email");

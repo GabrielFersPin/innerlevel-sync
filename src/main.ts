@@ -51,22 +51,28 @@ export default class InnerLevelSyncPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const stored: Record<string, unknown> = (await this.loadData() as Record<string, unknown> | null) || {};
+    const stored = ((await this.loadData()) as Record<string, unknown> | null) || {};
     this.settings = Object.assign({}, DEFAULT_SETTINGS, stored, { password: '' });
     const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
-    const cleaned = Object.fromEntries(
-      Object.entries(stored).filter(([key]) => !key.startsWith('sb_') || key === currentAuthKey)
-    );
+    const cleaned: Record<string, unknown> = {};
+    for (const key of Object.keys(stored)) {
+      if (!key.startsWith('sb_') || key === currentAuthKey) {
+        cleaned[key] = stored[key];
+      }
+    }
     await this.saveData({ ...cleaned, ...this.settings });
   }
 
   async saveSettings(): Promise<void> {
     this.client = null;
-    const stored: Record<string, unknown> = (await this.loadData() as Record<string, unknown> | null) || {};
+    const stored = ((await this.loadData()) as Record<string, unknown> | null) || {};
     const currentAuthKey = authStorageKey(this.settings.supabaseUrl);
-    const authData = Object.fromEntries(
-      Object.entries(stored).filter(([key]) => !key.startsWith('sb_') || key === currentAuthKey)
-    );
+    const authData: Record<string, unknown> = {};
+    for (const key of Object.keys(stored)) {
+      if (!key.startsWith('sb_') || key === currentAuthKey) {
+        authData[key] = stored[key];
+      }
+    }
     await this.saveData({ ...authData, ...this.settings, password: '' });
   }
 
@@ -287,7 +293,7 @@ class InnerLevelSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    new Setting(containerEl).setName('InnerLevel Sync').setHeading();
+    new Setting(containerEl).setName('General Settings').setHeading();
     this.textSetting(containerEl, 'Supabase URL', 'supabaseUrl');
     this.textSetting(containerEl, 'Supabase anon key', 'supabaseAnonKey');
     this.textSetting(containerEl, 'Email', 'email');
