@@ -1,4 +1,4 @@
-import { App, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
+import { App, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, SettingDefinitionItem, TFile } from 'obsidian';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export type SyncMode = 'individual' | 'area';
@@ -290,10 +290,89 @@ export default class InnerLevelSyncPlugin extends Plugin {
 class InnerLevelSettingTab extends PluginSettingTab {
   constructor(app: App, private plugin: InnerLevelSyncPlugin) { super(app, plugin); }
 
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return [
+      {
+        type: 'group',
+        heading: 'Configuration',
+        items: [
+          { name: 'Supabase URL', control: { type: 'text', key: 'supabaseUrl' } },
+          { name: 'Supabase anon key', control: { type: 'text', key: 'supabaseAnonKey' } },
+          { name: 'Email', control: { type: 'text', key: 'email' } },
+          { name: 'Password', control: { type: 'text', key: 'password' } },
+          { name: 'Dashboard path', control: { type: 'text', key: 'dashboardPath' } },
+          {
+            name: 'Connection',
+            desc: 'Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos.',
+            action: () => { void this.plugin.testConnection(); },
+          },
+          {
+            name: 'Modo de sincronización / Sync Mode',
+            desc: 'Elige si deseas crear una carta por cada nota individual o agrupar por área mostrando el tiempo total acumulado.',
+            control: {
+              type: 'dropdown',
+              key: 'syncMode',
+              options: {
+                area: 'Por Área / By Area (cartas agrupadas con tiempo total)',
+                individual: 'Individual (una carta por nota)',
+              },
+            },
+          },
+          {
+            name: 'Automatic daily sync',
+            desc: 'Sincroniza una vez al abrir Obsidian, después de cargar el vault.',
+            control: { type: 'toggle', key: 'autoSyncToday' },
+          },
+          {
+            name: 'Default duration (hours)',
+            control: { type: 'number', key: 'defaultDuration', min: 0, step: 0.25 },
+          },
+          {
+            name: 'Default energy cost',
+            control: { type: 'number', key: 'defaultEnergyCost', min: 0, step: 1 },
+          },
+        ],
+      },
+    ];
+  }
+
+  getControlValue(key: string): unknown {
+    if (!isSettingKey(key)) throw new Error(`Unknown setting key: ${key}`);
+    return this.plugin.settings[key];
+  }
+
+  async setControlValue(key: string, value: unknown): Promise<void> {
+    if (!isSettingKey(key)) throw new Error(`Unknown setting key: ${key}`);
+    switch (key) {
+      case 'supabaseUrl':
+      case 'supabaseAnonKey':
+      case 'email':
+      case 'password':
+      case 'dashboardPath':
+        if (typeof value !== 'string') throw new TypeError(`Invalid value for ${key}`);
+        this.plugin.settings[key] = value;
+        break;
+      case 'syncMode':
+        if (value !== 'area' && value !== 'individual') throw new TypeError(`Invalid value for ${key}`);
+        this.plugin.settings.syncMode = value;
+        break;
+      case 'autoSyncToday':
+        if (typeof value !== 'boolean') throw new TypeError(`Invalid value for ${key}`);
+        this.plugin.settings.autoSyncToday = value;
+        break;
+      case 'defaultDuration':
+      case 'defaultEnergyCost':
+        if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError(`Invalid value for ${key}`);
+        this.plugin.settings[key] = value;
+        break;
+    }
+    await this.plugin.saveSettings();
+  }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    new Setting(containerEl).setName('General Settings').setHeading();
+    new Setting(containerEl).setName('Configuration').setHeading();
     this.textSetting(containerEl, 'Supabase URL', 'supabaseUrl');
     this.textSetting(containerEl, 'Supabase anon key', 'supabaseAnonKey');
     this.textSetting(containerEl, 'Email', 'email');
@@ -327,6 +406,15 @@ class InnerLevelSettingTab extends PluginSettingTab {
       text.onChange(async value => { this.plugin.settings[key] = value; await this.plugin.saveSettings(); });
     });
   }
+}
+
+const SETTING_KEYS = [
+  'supabaseUrl', 'supabaseAnonKey', 'email', 'password', 'defaultDuration',
+  'defaultEnergyCost', 'dashboardPath', 'autoSyncToday', 'syncMode',
+] as const;
+
+function isSettingKey(key: string): key is typeof SETTING_KEYS[number] {
+  return (SETTING_KEYS as readonly string[]).includes(key);
 }
 
 function isoToday(): string { return new Date().toISOString().slice(0, 10); }
