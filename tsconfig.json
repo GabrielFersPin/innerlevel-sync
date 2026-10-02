@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": { "obsidian": ["node_modules/obsidian"] },
+    "paths": { "obsidian": ["./node_modules/obsidian"] },
     "typeRoots": ["node_modules/@types", "node_modules/obsidian"],
     "inlineSourceMap": true,
     "inlineSources": true,
@@ -17,7 +16,6 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "importHelpers": true,
-    "downlevelIteration": true,
     "esModuleInterop": true,
     "lib": ["dom", "es2018"]
   },
