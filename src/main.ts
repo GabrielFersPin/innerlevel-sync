@@ -96,7 +96,15 @@ export default class InnerLevelSyncPlugin extends Plugin {
           await this.saveData(data);
         },
       };
-      this.client = createClient(this.settings.supabaseUrl, this.settings.supabaseAnonKey, { auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+      this.client = createClient(this.settings.supabaseUrl, this.settings.supabaseAnonKey, {
+        auth: {
+          storage,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+          lock: async <R>(_name: string, _acquireTimeout: number, fn: (lock: unknown) => Promise<R>): Promise<R> => await fn(null),
+        },
+      });
     }
     return this.client;
   }

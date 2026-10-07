@@ -42,7 +42,7 @@ function __rest(s, e) {
     }
   return t;
 }
-function __awaiter(thisArg, _arguments, P, generator) {
+function __asyncHelper(thisArg, _arguments, P, generator) {
   function adopt(value) {
     return value instanceof P ? value : new P(function(resolve) {
       resolve(value);
@@ -300,7 +300,7 @@ var FunctionsClient = class {
    * ```
    */
   invoke(functionName_1) {
-    return __awaiter(this, arguments, void 0, function* (functionName, options = {}) {
+    return __asyncHelper(this, arguments, void 0, function* (functionName, options = {}) {
       var _a, _b;
       let timeoutId;
       let timeoutController;
@@ -5341,7 +5341,7 @@ var Ajax = class {
     }
     try {
       return JSON.parse(resp);
-    } catch (e) {
+    } catch {
       console && console.log("failed to parse JSON response", resp);
       return null;
     }
@@ -5904,7 +5904,6 @@ var Socket = class {
    * @param {SocketOptions} [opts] - Optional configuration
    */
   constructor(endPoint, opts = {}) {
-    var _a, _b;
     this.stateChangeCallbacks = { open: [], close: [], error: [], message: [] };
     this.channels = [];
     this.sendBuffer = [];
@@ -5918,10 +5917,10 @@ var Socket = class {
     this.fallbackTimer = null;
     let envSessionStorage = null;
     try {
-      envSessionStorage = global2 && global2.sessionStorage;
-    } catch (e) {
+      envSessionStorage = global2 && global2.inMemorySessionStore;
+    } catch {
     }
-    this.sessionStore = opts.sessionStorage || envSessionStorage;
+    this.sessionStore = opts.inMemorySessionStore || envSessionStorage;
     this.establishedConnections = 0;
     this.defaultEncoder = serializer_default.encode.bind(serializer_default);
     this.defaultDecoder = serializer_default.decode.bind(serializer_default);
@@ -5965,9 +5964,9 @@ var Socket = class {
       });
     }
     this.heartbeatIntervalMs = opts.heartbeatIntervalMs || 3e4;
-    this.autoSendHeartbeat = (_a = opts.autoSendHeartbeat) != null ? _a : true;
-    this.heartbeatCallback = (_b = opts.heartbeatCallback) != null ? _b : () => {
-    };
+    this.autoSendHeartbeat = opts.autoSendHeartbeat ?? true;
+    this.heartbeatCallback = opts.heartbeatCallback ?? (() => {
+    });
     this.rejoinAfterMs = (tries) => {
       if (opts.rejoinAfterMs) {
         return opts.rejoinAfterMs(tries);
@@ -7802,8 +7801,8 @@ function createMemorySessionStorage() {
 }
 function resolveSessionStorage() {
   try {
-    if (typeof globalThis !== "undefined" && globalThis.sessionStorage) {
-      return globalThis.sessionStorage;
+    if (typeof globalThis !== "undefined" && void 0) {
+      return void 0;
     }
   } catch (_a) {
   }
@@ -8381,7 +8380,7 @@ var RealtimeClient = class {
     result.params = options === null || options === void 0 ? void 0 : options.params;
     result.logger = options === null || options === void 0 ? void 0 : options.logger;
     result.heartbeatCallback = this._wrapHeartbeatCallback(options === null || options === void 0 ? void 0 : options.heartbeatCallback);
-    result.sessionStorage = (_h = options === null || options === void 0 ? void 0 : options.sessionStorage) !== null && _h !== void 0 ? _h : resolveSessionStorage();
+    result.inMemorySessionStore = (_h = options === null || options === void 0 ? void 0 : options.inMemorySessionStore) !== null && _h !== void 0 ? _h : resolveSessionStorage();
     result.reconnectAfterMs = (_j = options === null || options === void 0 ? void 0 : options.reconnectAfterMs) !== null && _j !== void 0 ? _j : (tries) => {
       return RECONNECT_INTERVALS[tries - 1] || DEFAULT_RECONNECT_FALLBACK;
     };
@@ -8433,14 +8432,13 @@ var RealtimeClient = class {
 // node_modules/iceberg-js/dist/index.mjs
 var IcebergError = class extends Error {
   constructor(message, opts) {
-    var _a;
     super(message);
     this.name = "IcebergError";
     this.status = opts.status;
     this.icebergType = opts.icebergType;
     this.icebergCode = opts.icebergCode;
     this.details = opts.details;
-    this.isCommitStateUnknown = opts.icebergType === "CommitStateUnknownException" || [500, 502, 504].includes(opts.status) && ((_a = opts.icebergType) == null ? void 0 : _a.includes("CommitState")) === true;
+    this.isCommitStateUnknown = opts.icebergType === "CommitStateUnknownException" || [500, 502, 504].includes(opts.status) && opts.icebergType?.includes("CommitState") === true;
   }
   /**
    * Returns true if the error is a 404 Not Found error.
@@ -8488,8 +8486,7 @@ async function buildAuthHeaders(auth) {
   return {};
 }
 function createFetchClient(options) {
-  var _a;
-  const fetchFn = (_a = options.fetchImpl) != null ? _a : globalThis.fetch;
+  const fetchFn = options.fetchImpl ?? globalThis.fetch;
   return {
     async request({
       method,
@@ -8498,7 +8495,6 @@ function createFetchClient(options) {
       body,
       headers
     }) {
-      var _a2;
       const url = buildUrl(options.baseUrl, path, query);
       const authHeaders = await buildAuthHeaders(options.auth);
       const res = await fetchFn(url, {
@@ -8515,13 +8511,13 @@ function createFetchClient(options) {
       const data = isJson && text ? JSON.parse(text) : text;
       if (!res.ok) {
         const errBody = isJson ? data : void 0;
-        const errorDetail = errBody == null ? void 0 : errBody.error;
+        const errorDetail = errBody?.error;
         throw new IcebergError(
-          (_a2 = errorDetail == null ? void 0 : errorDetail.message) != null ? _a2 : `Request failed with status ${res.status}`,
+          errorDetail?.message ?? `Request failed with status ${res.status}`,
           {
             status: res.status,
-            icebergType: errorDetail == null ? void 0 : errorDetail.type,
-            icebergCode: errorDetail == null ? void 0 : errorDetail.code,
+            icebergType: errorDetail?.type,
+            icebergCode: errorDetail?.code,
             details: errBody
           }
         );
@@ -8550,7 +8546,7 @@ var NamespaceOperations = class {
   async createNamespace(id, metadata) {
     const request = {
       namespace: id.namespace,
-      properties: metadata == null ? void 0 : metadata.properties
+      properties: metadata?.properties
     };
     const response = await this.client.request({
       method: "POST",
@@ -8640,11 +8636,10 @@ var TableOperations = class {
     };
   }
   async dropTable(id, options) {
-    var _a;
     await this.client.request({
       method: "DELETE",
       path: `${this.prefix}/namespaces/${namespaceToPath2(id.namespace)}/tables/${id.name}`,
-      query: { purgeRequested: String((_a = options == null ? void 0 : options.purge) != null ? _a : false) }
+      query: { purgeRequested: String(options?.purge ?? false) }
     });
   }
   async loadTable(id) {
@@ -8696,7 +8691,6 @@ var IcebergRestCatalog = class {
    * @param options - Configuration options for the catalog client
    */
   constructor(options) {
-    var _a;
     let prefix = "v1";
     if (options.catalogName) {
       prefix += `/${options.catalogName}`;
@@ -8707,7 +8701,7 @@ var IcebergRestCatalog = class {
       auth: options.auth,
       fetchImpl: options.fetch
     });
-    this.accessDelegation = (_a = options.accessDelegation) == null ? void 0 : _a.join(",");
+    this.accessDelegation = options.accessDelegation?.join(",");
     this.namespaceOps = new NamespaceOperations(this.client, prefix);
     this.tableOps = new TableOperations(this.client, prefix, this.accessDelegation);
   }
@@ -12256,7 +12250,7 @@ function generateCallbackId() {
   return Symbol("auth-callback");
 }
 var isBrowser = () => typeof window !== "undefined" && typeof document !== "undefined";
-var localStorageWriteTests = {
+var inMemoryStorageStoreWriteTests = {
   tested: false,
   writable: false
 };
@@ -12265,26 +12259,26 @@ var supportsLocalStorage = () => {
     return false;
   }
   try {
-    if (typeof globalThis.localStorage !== "object") {
+    if (true) {
       return false;
     }
   } catch (e) {
     return false;
   }
-  if (localStorageWriteTests.tested) {
-    return localStorageWriteTests.writable;
+  if (inMemoryStorageStoreWriteTests.tested) {
+    return inMemoryStorageStoreWriteTests.writable;
   }
   const randomKey = `lswt-${Math.random()}${Math.random()}`;
   try {
-    globalThis.localStorage.setItem(randomKey, randomKey);
-    globalThis.localStorage.removeItem(randomKey);
-    localStorageWriteTests.tested = true;
-    localStorageWriteTests.writable = true;
+    (void 0).setItem(randomKey, randomKey);
+    (void 0).removeItem(randomKey);
+    inMemoryStorageStoreWriteTests.tested = true;
+    inMemoryStorageStoreWriteTests.writable = true;
   } catch (e) {
-    localStorageWriteTests.tested = true;
-    localStorageWriteTests.writable = false;
+    inMemoryStorageStoreWriteTests.tested = true;
+    inMemoryStorageStoreWriteTests.writable = false;
   }
-  return localStorageWriteTests.writable;
+  return inMemoryStorageStoreWriteTests.writable;
 };
 function parseParametersFromURL(href) {
   const result = {};
@@ -13891,7 +13885,7 @@ var internals = {
   /**
    * @experimental
    */
-  debug: !!(globalThis && supportsLocalStorage() && globalThis.localStorage && globalThis.localStorage.getItem("supabase.gotrue-js.locks.debug") === "true")
+  debug: !!(globalThis && supportsLocalStorage() && void 0)
 };
 var LockAcquireTimeoutError = class extends Error {
   constructor(message) {
@@ -14848,7 +14842,7 @@ var GoTrueClient = class _GoTrueClient {
         this.storage = settings.storage;
       } else {
         if (supportsLocalStorage()) {
-          this.storage = globalThis.localStorage;
+          this.storage = void 0;
         } else {
           this.memoryStorage = {};
           this.storage = memoryLocalStorageAdapter(this.memoryStorage);
@@ -15588,16 +15582,16 @@ var GoTrueClient = class _GoTrueClient {
    * // provider tokens from the callback.
    * supabase.auth.onAuthStateChange((event, session) => {
    *   if (session && session.provider_token) {
-   *     window.localStorage.setItem('oauth_provider_token', session.provider_token)
+   *     window.inMemoryStorageStore.setItem('oauth_provider_token', session.provider_token)
    *   }
    *
    *   if (session && session.provider_refresh_token) {
-   *     window.localStorage.setItem('oauth_provider_refresh_token', session.provider_refresh_token)
+   *     window.inMemoryStorageStore.setItem('oauth_provider_refresh_token', session.provider_refresh_token)
    *   }
    *
    *   if (event === 'SIGNED_OUT') {
-   *     window.localStorage.removeItem('oauth_provider_token')
-   *     window.localStorage.removeItem('oauth_provider_refresh_token')
+   *     window.inMemoryStorageStore.removeItem('oauth_provider_token')
+   *     window.inMemoryStorageStore.removeItem('oauth_provider_refresh_token')
    *   }
    * })
    *
@@ -17929,8 +17923,8 @@ var GoTrueClient = class _GoTrueClient {
    *
    *     // clear local and session storage
    *     [
-   *       window.localStorage,
-   *       window.sessionStorage,
+   *       window.inMemoryStorageStore,
+   *       window.inMemorySessionStore,
    *     ].forEach((storage) => {
    *       Object.entries(storage)
    *         .forEach(([key]) => {
@@ -17955,16 +17949,16 @@ var GoTrueClient = class _GoTrueClient {
    * // provider tokens from the callback.
    * supabase.auth.onAuthStateChange((event, session) => {
    *   if (session && session.provider_token) {
-   *     window.localStorage.setItem('oauth_provider_token', session.provider_token)
+   *     window.inMemoryStorageStore.setItem('oauth_provider_token', session.provider_token)
    *   }
    *
    *   if (session && session.provider_refresh_token) {
-   *     window.localStorage.setItem('oauth_provider_refresh_token', session.provider_refresh_token)
+   *     window.inMemoryStorageStore.setItem('oauth_provider_refresh_token', session.provider_refresh_token)
    *   }
    *
    *   if (event === 'SIGNED_OUT') {
-   *     window.localStorage.removeItem('oauth_provider_token')
-   *     window.localStorage.removeItem('oauth_provider_refresh_token')
+   *     window.inMemoryStorageStore.removeItem('oauth_provider_token')
+   *     window.inMemoryStorageStore.removeItem('oauth_provider_refresh_token')
    *   }
    * })
    * ```
@@ -20883,7 +20877,15 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
           await this.saveData(data);
         }
       };
-      this.client = createClient(this.settings.supabaseUrl, this.settings.supabaseAnonKey, { auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+      this.client = createClient(this.settings.supabaseUrl, this.settings.supabaseAnonKey, {
+        auth: {
+          storage,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+          lock: async (_name, _acquireTimeout, fn) => await fn(null)
+        }
+      });
     }
     return this.client;
   }
@@ -20906,13 +20908,12 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
     }
   }
   async captureCurrentNote() {
-    var _a;
     try {
       const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
       if (!view) throw new Error("Abre una nota Markdown para capturarla.");
       const file = view.file;
       if (!file) throw new Error("La vista activa no tiene un archivo Markdown.");
-      const frontmatter = ((_a = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a.frontmatter) || {};
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
       const selection = view.editor.getSelection().trim();
       const description = selection || firstMeaningfulParagraph(view.editor.getValue()) || file.basename;
       const card = this.makeCard(`obsidian-capture-${stableId(file.path)}-${Date.now()}`, file.basename, description, frontmatter, ["obsidian", "quick-seed"]);
@@ -20932,19 +20933,17 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
     }
   }
   async syncDueNotes(force = false, modeOverride) {
-    var _a;
     try {
       const client = await this.ensureSession();
       const today = isoToday();
       const mode = modeOverride || this.settings.syncMode || "area";
       const dueNotes = this.app.vault.getMarkdownFiles().filter((file) => {
-        var _a2;
-        const frontmatter = ((_a2 = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a2.frontmatter) || {};
+        const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
         return isDue(frontmatter, today);
       });
       const notesToSync = [];
       for (const file of dueNotes) {
-        const frontmatter = ((_a = this.app.metadataCache.getFileCache(file)) == null ? void 0 : _a.frontmatter) || {};
+        const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
         if (!force && frontmatter.innerlevel_last_sync === today) continue;
         const body = await this.app.vault.read(file);
         notesToSync.push({ file, frontmatter, body });
@@ -21110,8 +21109,7 @@ function isoToday() {
   return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 }
 function authStorageKey(url) {
-  var _a;
-  const ref = ((_a = url.match(/^https:\/\/([^.]+)\.supabase\.co/)) == null ? void 0 : _a[1]) || "";
+  const ref = url.match(/^https:\/\/([^.]+)\.supabase\.co/)?.[1] || "";
   return `sb_sb-${ref}-auth-token`;
 }
 function stableId(path) {
@@ -21121,8 +21119,7 @@ function slug(value) {
   return stableId(value);
 }
 function firstMeaningfulParagraph(body) {
-  var _a;
-  return ((_a = body.split(/\n\s*\n/).map((part) => part.replace(/^#+\s*/, "").trim()).find(Boolean)) == null ? void 0 : _a.slice(0, 500)) || "";
+  return body.split(/\n\s*\n/).map((part) => part.replace(/^#+\s*/, "").trim()).find(Boolean)?.slice(0, 500) || "";
 }
 function getFMValue(frontmatter, ...keys) {
   for (const key of keys) {

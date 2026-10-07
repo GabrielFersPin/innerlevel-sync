@@ -18,6 +18,26 @@ It automatically extracts your daily due study notes and quick captures from Obs
 
 ---
 
+## 🌐 Network & Vault Access Disclosures
+
+### External Network Requests
+This plugin makes network requests only to necessary, user-configured external endpoints:
+
+1. **`https://inner-level-app.vercel.app`**:
+   - **Purpose**: Opens the official InnerLevel web application in your default web browser.
+   - **Trigger**: Opened only when you explicitly invoke the **"Open InnerLevel"** command.
+2. **User-configured Supabase Backend (`https://<your-project>.supabase.co`)**:
+   - **Purpose**: Authenticates your InnerLevel account using email/password and syncs forged action cards generated from your Obsidian study notes into your InnerLevel card database via Supabase RPC (`append_obsidian_card`).
+   - **Data Sent**: Card title, summary description (or note excerpt), calculated study duration, energy cost, priority, SRS tags, and `obsidian://open` deep links pointing back to your local note.
+   - **Trigger**: Executed only when you run a sync command, click **"Sign in / test"** in plugin settings, or when **Automatic daily sync** is explicitly enabled in settings.
+
+### Vault Access & File Enumeration
+- **`vault.getMarkdownFiles()` Rationale**: The plugin scans the frontmatter of markdown files in your vault to check for SRS review metadata fields (`due_date`, `note_type` / `tipo_nota`, `area`, etc.) to determine which study notes are due for review today (`due_date <= today`).
+- **File Content Access**: Note text is read locally to extract brief excerpts for action card descriptions and to calculate review duration. Note contents are never uploaded or shared anywhere other than the card title and description sent to your private InnerLevel account.
+- **Data Storage**: All plugin settings and authentication tokens are persisted strictly through Obsidian's native plugin storage APIs (`this.loadData()` and `this.saveData()`). No browser `localStorage` or `sessionStorage` APIs are used.
+
+---
+
 ## ⚙️ Configuration & Setup
 
 1. Install and enable **InnerLevel Sync** in Obsidian Settings.
