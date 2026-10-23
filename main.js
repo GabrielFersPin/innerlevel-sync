@@ -20787,6 +20787,20 @@ function shouldShowDeprecationWarning() {
 if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
 
 // src/main.ts
+var INNERLEVEL_ICON_SVG = `
+<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <g style="stroke: none; shape-rendering: crispEdges;" stroke="none">
+    <!-- Peak Silhouette & Base Outline (uses currentColor to match theme and hover) -->
+    <path fill="currentColor" stroke="none" d="M7 1h1v1h-1Z M6 2h1v1h-1Z M8 2h1v1h-1Z M5 3h1v1h-1Z M9 3h1v1h-1Z M4 4h1v1h-1Z M10 4h1v1h-1Z M3 5h1v1h-1Z M11 5h1v1h-1Z M2 6h1v1h-1Z M12 6h1v1h-1Z M1 7h1v1h-1Z M13 7h1v1h-1Z M1 8h1v1h-1Z M14 8h1v1h-1Z M0 9h1v1h-1Z M14 9h2v1h-2Z M0 10h1v4h-1Z M15 10h1v4h-1Z M0 14h16v1h-16Z" />
+    <!-- Snowy Peak Summit & Ridge -->
+    <path fill="#FFFFFF" stroke="none" d="M7 2h1v1h-1Z M6 3h3v1h-3Z M5 4h5v1h-5Z M4 5h7v1h-7Z M3 6h9v1h-9Z M4 7h7v1h-7Z M6 8h5v1h-5Z M7 9h3v1h-3Z M8 10h1v4h-1Z" />
+    <!-- Left Slope (Light Cozy Emerald) -->
+    <path fill="#34D399" stroke="none" d="M2 7h2v1h-2Z M2 8h4v1h-4Z M1 9h6v1h-6Z M1 10h7v4h-7Z" />
+    <!-- Right Slope (Deep Forest Emerald) -->
+    <path fill="#047857" stroke="none" d="M11 7h2v1h-2Z M11 8h3v1h-3Z M10 9h4v1h-4Z M9 10h6v4h-6Z" />
+  </g>
+</svg>
+`;
 var DEFAULT_SETTINGS = {
   supabaseUrl: "",
   supabaseAnonKey: "",
@@ -20820,6 +20834,48 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
   async onload() {
     await this.loadSettings();
     this.addSettingTab(new InnerLevelSettingTab(this.app, this));
+    (0, import_obsidian.addIcon)("innerlevel-peak", INNERLEVEL_ICON_SVG);
+    (0, import_obsidian.addIcon)("innerlevel-crystal", INNERLEVEL_ICON_SVG);
+    const ribbonIconEl = this.addRibbonIcon("innerlevel-peak", "InnerLevel: Sync due notes", (_evt) => {
+      void this.syncDueNotes();
+    });
+    ribbonIconEl.addClass("innerlevel-sync-ribbon-icon");
+    ribbonIconEl.addEventListener("contextmenu", (evt) => {
+      evt.preventDefault();
+      const menu = new import_obsidian.Menu();
+      menu.addItem(
+        (item) => item.setTitle("Sync today's due notes").setIcon("refresh-cw").onClick(() => {
+          void this.syncDueNotes();
+        })
+      );
+      menu.addItem(
+        (item) => item.setTitle("Sync today's due notes (by area)").setIcon("folder").onClick(() => {
+          void this.syncDueNotes(false, "area");
+        })
+      );
+      menu.addItem(
+        (item) => item.setTitle("Sync today's due notes (individual)").setIcon("file-text").onClick(() => {
+          void this.syncDueNotes(false, "individual");
+        })
+      );
+      menu.addItem(
+        (item) => item.setTitle("Resync today's due notes (force)").setIcon("rotate-ccw").onClick(() => {
+          void this.syncDueNotes(true);
+        })
+      );
+      menu.addSeparator();
+      menu.addItem(
+        (item) => item.setTitle("Capture selection / current note").setIcon("file-plus").onClick(() => {
+          void this.captureCurrentNote();
+        })
+      );
+      menu.addItem(
+        (item) => item.setTitle("Open InnerLevel").setIcon("external-link").onClick(() => {
+          window.open("https://inner-level-app.vercel.app/", "_blank");
+        })
+      );
+      menu.showAtMouseEvent(evt);
+    });
     this.addCommand({ id: "capture-current-note", name: "Capture selection / current note", callback: () => this.captureCurrentNote() });
     this.addCommand({ id: "sync-due-today", name: "Sync today's due notes", callback: () => this.syncDueNotes() });
     this.addCommand({ id: "sync-due-today-area", name: "Sync today's due notes (by area)", callback: () => this.syncDueNotes(false, "area") });
@@ -20916,7 +20972,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
       const selection = view.editor.getSelection().trim();
       const description = selection || firstMeaningfulParagraph(view.editor.getValue()) || file.basename;
-      const card = this.makeCard(`obsidian-capture-${stableId(file.path)}-${Date.now()}`, file.basename, description, frontmatter, ["obsidian", "quick-seed"]);
+      const card = this.makeCard(`obsidian-capture-${stableId(file.path)}-${Date.now()}`, file.basename, description, frontmatter, ["obsidian", "quick-seed"], file);
       const { error } = await (await this.ensureSession()).rpc("append_obsidian_card", { p_card: card });
       if (error) throw error;
       new import_obsidian.Notice(`Capturada: ${file.basename}`);
@@ -20939,8 +20995,12 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
       const mode = modeOverride || this.settings.syncMode || "area";
       const dueNotes = this.app.vault.getMarkdownFiles().filter((file) => {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-        return isDue(frontmatter, today);
+        return isDue(frontmatter, today, file);
       });
+      if (dueNotes.length === 0) {
+        new import_obsidian.Notice("InnerLevel: No hay notas pendientes de repaso para hoy.");
+        return true;
+      }
       const notesToSync = [];
       for (const file of dueNotes) {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
@@ -20949,14 +21009,14 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
         notesToSync.push({ file, frontmatter, body });
       }
       if (notesToSync.length === 0) {
-        if (!force) new import_obsidian.Notice("Las notas pendientes ya estaban sincronizadas hoy.");
+        if (!force) new import_obsidian.Notice(`InnerLevel: Las ${dueNotes.length} notas pendientes ya estaban sincronizadas hoy.`);
         return true;
       }
       let syncedCount = 0;
       if (mode === "area") {
         const areaGroups = /* @__PURE__ */ new Map();
         for (const item of notesToSync) {
-          const areaName = getArea(item.frontmatter) || "Sin \xC1rea";
+          const areaName = getArea(item.frontmatter, item.file) || "Sin \xC1rea";
           if (!areaGroups.has(areaName)) areaGroups.set(areaName, []);
           areaGroups.get(areaName).push(item);
         }
@@ -21016,7 +21076,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
         new import_obsidian.Notice(`Sincronizadas ${syncedCount} notas en ${areaGroups.size} \xE1rea(s).`);
       } else {
         for (const item of notesToSync) {
-          const card = this.makeCard(`obsidian-${stableId(item.file.path)}-${today}`, item.file.basename, dueDescription(item.file, item.frontmatter, item.body), item.frontmatter, ["obsidian", "srs", "due-today"]);
+          const card = this.makeCard(`obsidian-${stableId(item.file.path)}-${today}`, item.file.basename, dueDescription(item.file, item.frontmatter, item.body), item.frontmatter, ["obsidian", "srs", "due-today"], item.file);
           const { error } = await client.rpc("append_obsidian_card", { p_card: card });
           if (error) throw error;
           await this.markSynced(item.file, card.id, today);
@@ -21030,9 +21090,9 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
       return false;
     }
   }
-  makeCard(id, name, description, frontmatter, baseTags) {
+  makeCard(id, name, description, frontmatter, baseTags, file) {
     const timing = timingFor(getReviewTime(frontmatter), this.settings);
-    const area = getArea(frontmatter);
+    const area = getArea(frontmatter, file);
     return { id, name, description, type: "action", rarity: "common", classTypes: ["strategist", "warrior", "creator", "connector", "sage"], energyCost: timing.energyCost, duration: timing.duration, impact: 10, skillBonus: [], requirements: {}, conditions: {}, tags: [...baseTags, ...area ? [slug(area)] : []], createdAt: (/* @__PURE__ */ new Date()).toISOString(), forged: true, usageCount: 0, isOnCooldown: false, priority: priorityFor(frontmatter) };
   }
   async markSynced(file, cardId, today) {
@@ -21228,8 +21288,13 @@ function getNoteType(frontmatter) {
 function getDueDate(frontmatter) {
   return getFMValue(frontmatter, "due_date", "next_review", "due", "proxima-revision", "proxima_revision", "proxima_review");
 }
-function getArea(frontmatter) {
-  return getFMValue(frontmatter, "area", "topic", "subject");
+function getArea(frontmatter, file) {
+  const explicit = getFMValue(frontmatter, "area", "topic", "subject", "cards-deck", "cards_deck", "deck");
+  if (explicit) return explicit;
+  if (file && file.parent && file.parent.name && file.parent.name !== "/") {
+    return file.parent.name;
+  }
+  return "General";
 }
 function getStatus(frontmatter) {
   return getFMValue(frontmatter, "status", "state", "estado");
@@ -21246,18 +21311,18 @@ function getReviewResult(frontmatter) {
 function getPriority(frontmatter) {
   return getFMValue(frontmatter, "priority", "prioridad");
 }
-function isDue(frontmatter, today) {
+function isDue(frontmatter, today, file) {
   const type = getNoteType(frontmatter);
   const due = getDueDate(frontmatter);
   const level = getComprehension(frontmatter).toUpperCase();
   const status = getStatus(frontmatter).toLowerCase();
-  const area = getArea(frontmatter);
+  const area = getArea(frontmatter, file);
   const isArchived = status === "\u{1F389} completado / archivado" || status === "archived" || status === "completed" || status === "archivado";
   const isCompleted = level === "COMPLETADO" || level === "COMPLETED";
   return DUE_TYPES.has(type) && Boolean(area) && due !== "" && due <= today && !isArchived && !isCompleted;
 }
 function dueDescription(file, frontmatter, body) {
-  const area = getArea(frontmatter);
+  const area = getArea(frontmatter, file);
   const level = getComprehension(frontmatter) || "pendiente";
   const time = getReviewTime(frontmatter) || "sin estimar";
   return [

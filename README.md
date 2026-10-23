@@ -8,6 +8,7 @@ It automatically extracts your daily due study notes and quick captures from Obs
 
 ## ✨ Features
 
+- **Sidebar Ribbon Quick-Action**: Click the InnerLevel crystal icon on the Obsidian left sidebar (ribbon) to immediately sync today's due notes, or right-click to open a context menu with all sync, capture, and app actions.
 - **Bilingual Frontmatter Support**: Out-of-the-box support for both **English and Spanish** frontmatter keys and values. Keep your existing Spanish notes while offering full English compatibility for the community!
 - **Dual Sync Modes**:
   - **By Area (`area`)**: Groups all due notes for a given topic/area into a single summary action card. Displays the **total cumulative study time** required for that area, lists all individual notes with their level of understanding, and provides direct `obsidian://open` deep links.
