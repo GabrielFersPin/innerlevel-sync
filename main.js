@@ -20819,12 +20819,16 @@ var DUE_TYPES = /* @__PURE__ */ new Set([
   "captura_rapida",
   "permanente",
   "problema",
+  "clase",
+  "trabajo",
   // English
   "technical",
   "study_note",
   "quick_capture",
   "permanent",
-  "problem"
+  "problem",
+  "class",
+  "work"
 ]);
 var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
   constructor() {
@@ -21001,15 +21005,33 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
         new import_obsidian.Notice("InnerLevel: No hay notas pendientes de repaso para hoy.");
         return true;
       }
+      let existingRemoteCardIds = /* @__PURE__ */ new Set();
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        const user = session?.user;
+        if (user) {
+          const { data: userData } = await client.from("user_data").select("cards").eq("user_id", user.id).maybeSingle();
+          if (userData?.cards?.inventory && Array.isArray(userData.cards.inventory)) {
+            existingRemoteCardIds = new Set(userData.cards.inventory.map((c) => c.id));
+          }
+        }
+      } catch (checkErr) {
+        console.warn("[InnerLevel Sync] Could not check remote cards in Supabase:", checkErr);
+      }
       const notesToSync = [];
       for (const file of dueNotes) {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-        if (!force && frontmatter.innerlevel_last_sync === today) continue;
+        const areaName = getArea(frontmatter, file) || "General";
+        const expectedCardId = mode === "area" ? `obsidian-area-${slug(areaName)}-${today}` : `obsidian-${stableId(file.path)}-${today}`;
+        const isPresentInRemote = existingRemoteCardIds.has(expectedCardId);
+        if (!force && frontmatter.innerlevel_last_sync === today && isPresentInRemote) {
+          continue;
+        }
         const body = await this.app.vault.read(file);
         notesToSync.push({ file, frontmatter, body });
       }
       if (notesToSync.length === 0) {
-        if (!force) new import_obsidian.Notice(`InnerLevel: Las ${dueNotes.length} notas pendientes ya estaban sincronizadas hoy.`);
+        new import_obsidian.Notice(`InnerLevel: Las ${dueNotes.length} notas pendientes ya est\xE1n en InnerLevel. Usa 'Resync (force)' para reenviarlas.`);
         return true;
       }
       let syncedCount = 0;
@@ -21311,6 +21333,15 @@ function getReviewResult(frontmatter) {
 function getPriority(frontmatter) {
   return getFMValue(frontmatter, "priority", "prioridad");
 }
+function normalizeType(raw) {
+  return raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s_-]/g, "").trim().replace(/\s+/g, "_");
+}
+function matchesDueType(rawType) {
+  if (!rawType) return false;
+  const normalized = normalizeType(rawType);
+  if (DUE_TYPES.has(normalized)) return true;
+  return /tecnic|estudio|captura|permanente|problem|clas|trabaj|technic|study|quick/.test(normalized);
+}
 function isDue(frontmatter, today, file) {
   const type = getNoteType(frontmatter);
   const due = getDueDate(frontmatter);
@@ -21319,7 +21350,12 @@ function isDue(frontmatter, today, file) {
   const area = getArea(frontmatter, file);
   const isArchived = status === "\u{1F389} completado / archivado" || status === "archived" || status === "completed" || status === "archivado";
   const isCompleted = level === "COMPLETADO" || level === "COMPLETED";
-  return DUE_TYPES.has(type) && Boolean(area) && due !== "" && due <= today && !isArchived && !isCompleted;
+  if (isArchived || isCompleted) return false;
+  const hasValidDueDate = Boolean(due && due <= today && !due.includes("<%"));
+  if (!hasValidDueDate) return false;
+  const hasType = matchesDueType(type);
+  const hasAreaOrFolder = Boolean(area);
+  return hasType || hasAreaOrFolder;
 }
 function dueDescription(file, frontmatter, body) {
   const area = getArea(frontmatter, file);

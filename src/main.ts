@@ -40,9 +40,9 @@ const DEFAULT_SETTINGS: InnerLevelSettings = {
 
 const DUE_TYPES = new Set([
   // Spanish
-  'tecnica', 'nota_estudio', 'captura_rapida', 'permanente', 'problema',
+  'tecnica', 'nota_estudio', 'captura_rapida', 'permanente', 'problema', 'clase', 'trabajo',
   // English
-  'technical', 'study_note', 'quick_capture', 'permanent', 'problem'
+  'technical', 'study_note', 'quick_capture', 'permanent', 'problem', 'class', 'work'
 ]);
 
 export default class InnerLevelSyncPlugin extends Plugin {
@@ -246,16 +246,47 @@ export default class InnerLevelSyncPlugin extends Plugin {
         return true;
       }
 
+      // Check which cards already exist in remote Supabase user_data.cards
+      let existingRemoteCardIds = new Set<string>();
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        const user = session?.user;
+        if (user) {
+          const { data: userData } = await client
+            .from('user_data')
+            .select('cards')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (userData?.cards?.inventory && Array.isArray(userData.cards.inventory)) {
+            existingRemoteCardIds = new Set(userData.cards.inventory.map((c: any) => c.id));
+          }
+        }
+      } catch (checkErr) {
+        console.warn('[InnerLevel Sync] Could not check remote cards in Supabase:', checkErr);
+      }
+
       const notesToSync: { file: TFile; frontmatter: Record<string, unknown>; body: string }[] = [];
       for (const file of dueNotes) {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-        if (!force && frontmatter.innerlevel_last_sync === today) continue;
+        const areaName = getArea(frontmatter, file) || 'General';
+        const expectedCardId = mode === 'area'
+          ? `obsidian-area-${slug(areaName)}-${today}`
+          : `obsidian-${stableId(file.path)}-${today}`;
+
+        // If force is false, and frontmatter says it was synced today,
+        // ONLY skip if the card is ACTUALLY present in Supabase remote inventory!
+        // If it's missing in Supabase, self-heal and re-push it!
+        const isPresentInRemote = existingRemoteCardIds.has(expectedCardId);
+        if (!force && frontmatter.innerlevel_last_sync === today && isPresentInRemote) {
+          continue;
+        }
+
         const body = await this.app.vault.read(file);
         notesToSync.push({ file, frontmatter, body });
       }
 
       if (notesToSync.length === 0) {
-        if (!force) new Notice(`InnerLevel: Las ${dueNotes.length} notas pendientes ya estaban sincronizadas hoy.`);
+        new Notice(`InnerLevel: Las ${dueNotes.length} notas pendientes ya están en InnerLevel. Usa 'Resync (force)' para reenviarlas.`);
         return true;
       }
 
@@ -564,6 +595,23 @@ function getPriority(frontmatter: Record<string, unknown>): string {
   return getFMValue(frontmatter, 'priority', 'prioridad');
 }
 
+function normalizeType(raw: string): string {
+  return raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s_-]/g, '')
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
+function matchesDueType(rawType: string): boolean {
+  if (!rawType) return false;
+  const normalized = normalizeType(rawType);
+  if (DUE_TYPES.has(normalized)) return true;
+  return /tecnic|estudio|captura|permanente|problem|clas|trabaj|technic|study|quick/.test(normalized);
+}
+
 function isDue(frontmatter: Record<string, unknown>, today: string, file?: TFile): boolean {
   const type = getNoteType(frontmatter);
   const due = getDueDate(frontmatter);
@@ -574,7 +622,16 @@ function isDue(frontmatter: Record<string, unknown>, today: string, file?: TFile
   const isArchived = status === '🎉 completado / archivado' || status === 'archived' || status === 'completed' || status === 'archivado';
   const isCompleted = level === 'COMPLETADO' || level === 'COMPLETED';
 
-  return DUE_TYPES.has(type) && Boolean(area) && due !== '' && due <= today && !isArchived && !isCompleted;
+  if (isArchived || isCompleted) return false;
+
+  // Must have a valid review date that is not a template placeholder (<% ...)
+  const hasValidDueDate = Boolean(due && due <= today && !due.includes('<%'));
+  if (!hasValidDueDate) return false;
+
+  const hasType = matchesDueType(type);
+  const hasAreaOrFolder = Boolean(area);
+
+  return hasType || hasAreaOrFolder;
 }
 
 function dueDescription(file: TFile, frontmatter: Record<string, unknown>, body: string): string {
