@@ -20963,7 +20963,7 @@ function detectLanguage(setting = "auto") {
     if (docLang.toLowerCase().startsWith("es")) return "es";
     const nav = navigator.language || "";
     if (nav.toLowerCase().startsWith("es")) return "es";
-  } catch (_e) {
+  } catch {
   }
   return "en";
 }
@@ -20980,6 +20980,15 @@ function addDays(days) {
   const d = /* @__PURE__ */ new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
+}
+function getFrontmatterString(fm, ...keys) {
+  for (const k of keys) {
+    const val = fm[k];
+    if (typeof val === "string" || typeof val === "number") {
+      return String(val).trim();
+    }
+  }
+  return "";
 }
 var ScheduleReviewModal = class extends import_obsidian.Modal {
   constructor(app, plugin, file) {
@@ -20999,18 +21008,18 @@ var ScheduleReviewModal = class extends import_obsidian.Modal {
     const lang = detectLanguage(this.plugin.settings.language);
     const t = getTranslations(lang);
     const fm = this.app.metadataCache.getFileCache(this.file)?.frontmatter || {};
-    const existingDate = String(fm["due_date"] || fm["proxima-revision"] || fm["proxima_revision"] || fm["due"] || "").trim();
+    const existingDate = getFrontmatterString(fm, "due_date", "proxima-revision", "proxima_revision", "due");
     if (existingDate && !existingDate.includes("<%")) {
       this.selectedDate = existingDate;
     }
-    const existingDuration = String(fm["tiempo-repaso"] || fm["review_time"] || fm["duration"] || "").trim();
+    const existingDuration = getFrontmatterString(fm, "tiempo-repaso", "review_time", "duration");
     if (existingDuration) {
       this.selectedDuration = existingDuration;
     } else {
       const mins = Math.round((this.plugin.settings.defaultDuration || 0.5) * 60);
       this.selectedDuration = `${mins}m`;
     }
-    const existingArea = String(fm["area"] || fm["cards-deck"] || fm["deck"] || fm["topic"] || "").trim();
+    const existingArea = getFrontmatterString(fm, "area", "cards-deck", "deck", "topic");
     if (existingArea) {
       this.selectedArea = existingArea;
     } else if (this.file.parent && this.file.parent.name && this.file.parent.name !== "/") {
@@ -21018,38 +21027,32 @@ var ScheduleReviewModal = class extends import_obsidian.Modal {
     } else {
       this.selectedArea = "General";
     }
-    const existingType = String(fm["tipo_nota"] || fm["note_type"] || fm["type"] || fm["tipo"] || "").trim();
+    const existingType = getFrontmatterString(fm, "tipo_nota", "note_type", "type", "tipo");
     if (existingType) {
       this.selectedType = existingType;
     } else {
       this.selectedType = this.plugin.settings.defaultNoteType || (lang === "es" ? "tecnica" : "technical");
     }
-    const existingLevel = String(fm["nivel-comprension"] || fm["understanding_level"] || fm["comprehension"] || "").trim();
+    const existingLevel = getFrontmatterString(fm, "nivel-comprension", "understanding_level", "comprehension");
     if (existingLevel) {
       this.selectedLevel = existingLevel;
     }
     this.titleEl.setText(t.modalTitle);
-    const descEl = contentEl.createEl("p", {
+    contentEl.createEl("p", {
       text: t.modalDesc(this.file.basename),
-      cls: "setting-item-description"
+      cls: "setting-item-description innerlevel-modal-desc"
     });
-    descEl.style.marginBottom = "18px";
     let dateInputEl;
     new import_obsidian.Setting(contentEl).setName(t.modalTargetDate).setDesc(t.modalTargetDateDesc).addText((text) => {
       dateInputEl = text.inputEl;
       dateInputEl.type = "date";
       dateInputEl.value = this.selectedDate;
-      dateInputEl.style.minWidth = "160px";
+      dateInputEl.addClass("innerlevel-date-input");
       text.onChange((val) => {
         this.selectedDate = val;
       });
     });
-    const quickDateContainer = contentEl.createEl("div", { cls: "innerlevel-quick-pills" });
-    quickDateContainer.style.display = "flex";
-    quickDateContainer.style.gap = "6px";
-    quickDateContainer.style.flexWrap = "wrap";
-    quickDateContainer.style.marginBottom = "16px";
-    quickDateContainer.style.paddingLeft = "4px";
+    const quickDateContainer = contentEl.createDiv({ cls: "innerlevel-quick-pills" });
     const quickDateOptions = [
       { label: t.modalQuickToday, days: 0 },
       { label: t.modalQuickTomorrow, days: 1 },
@@ -21058,10 +21061,10 @@ var ScheduleReviewModal = class extends import_obsidian.Modal {
       { label: t.modalQuick2w, days: 14 }
     ];
     quickDateOptions.forEach((opt) => {
-      const btn = quickDateContainer.createEl("button", { text: opt.label });
-      btn.style.fontSize = "12px";
-      btn.style.padding = "4px 10px";
-      btn.style.borderRadius = "8px";
+      const btn = quickDateContainer.createEl("button", {
+        text: opt.label,
+        cls: "innerlevel-pill-btn"
+      });
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         this.selectedDate = addDays(opt.days);
@@ -21087,18 +21090,13 @@ var ScheduleReviewModal = class extends import_obsidian.Modal {
         this.selectedDuration = val.trim();
       });
     });
-    const quickDurationContainer = contentEl.createEl("div", { cls: "innerlevel-quick-pills" });
-    quickDurationContainer.style.display = "flex";
-    quickDurationContainer.style.gap = "6px";
-    quickDurationContainer.style.flexWrap = "wrap";
-    quickDurationContainer.style.marginBottom = "16px";
-    quickDurationContainer.style.paddingLeft = "4px";
+    const quickDurationContainer = contentEl.createDiv({ cls: "innerlevel-quick-pills" });
     const quickDurations = ["5m", "15m", "30m", "45m", "1h"];
     quickDurations.forEach((d) => {
-      const btn = quickDurationContainer.createEl("button", { text: d });
-      btn.style.fontSize = "12px";
-      btn.style.padding = "4px 10px";
-      btn.style.borderRadius = "8px";
+      const btn = quickDurationContainer.createEl("button", {
+        text: d,
+        cls: "innerlevel-pill-btn"
+      });
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         this.selectedDuration = d;
@@ -21120,28 +21118,26 @@ var ScheduleReviewModal = class extends import_obsidian.Modal {
         this.selectedLevel = val;
       });
     });
-    const actionsContainer = contentEl.createEl("div", { cls: "innerlevel-modal-actions" });
-    actionsContainer.style.display = "flex";
-    actionsContainer.style.justifyContent = "flex-end";
-    actionsContainer.style.gap = "10px";
-    actionsContainer.style.marginTop = "24px";
-    actionsContainer.style.paddingTop = "14px";
-    actionsContainer.style.borderTop = "1px solid var(--background-modifier-border)";
+    const actionsContainer = contentEl.createDiv({ cls: "innerlevel-modal-actions" });
     const cancelBtn = actionsContainer.createEl("button", { text: t.modalCancel });
     cancelBtn.addEventListener("click", () => this.close());
     const saveOnlyBtn = actionsContainer.createEl("button", { text: t.modalSaveOnly });
-    saveOnlyBtn.addEventListener("click", async () => {
-      await this.saveMetadata(lang);
-      this.close();
+    saveOnlyBtn.addEventListener("click", () => {
+      void (async () => {
+        await this.saveMetadata(lang);
+        this.close();
+      })();
     });
     const saveAndSyncBtn = actionsContainer.createEl("button", {
       text: t.modalSaveAndSync,
       cls: "mod-cta"
     });
-    saveAndSyncBtn.addEventListener("click", async () => {
-      await this.saveMetadata(lang);
-      this.close();
-      await this.plugin.syncDueNotes(true);
+    saveAndSyncBtn.addEventListener("click", () => {
+      void (async () => {
+        await this.saveMetadata(lang);
+        this.close();
+        await this.plugin.syncDueNotes(true);
+      })();
     });
   }
   async saveMetadata(lang) {
@@ -21193,27 +21189,21 @@ var BatchScheduleModal = class extends import_obsidian2.Modal {
     const mins = Math.round((this.plugin.settings.defaultDuration || 0.5) * 60);
     this.selectedDuration = `${mins}m`;
     this.titleEl.setText(t.batchModalTitle(this.files.length));
-    const descEl = contentEl.createEl("p", {
+    contentEl.createEl("p", {
       text: t.batchModalDesc(this.files.length),
-      cls: "setting-item-description"
+      cls: "setting-item-description innerlevel-modal-desc"
     });
-    descEl.style.marginBottom = "18px";
     let dateInputEl;
     new import_obsidian2.Setting(contentEl).setName(t.modalTargetDate).setDesc(t.modalTargetDateDesc).addText((text) => {
       dateInputEl = text.inputEl;
       dateInputEl.type = "date";
       dateInputEl.value = this.selectedDate;
-      dateInputEl.style.minWidth = "160px";
+      dateInputEl.addClass("innerlevel-date-input");
       text.onChange((val) => {
         this.selectedDate = val;
       });
     });
-    const quickDateContainer = contentEl.createEl("div", { cls: "innerlevel-quick-pills" });
-    quickDateContainer.style.display = "flex";
-    quickDateContainer.style.gap = "6px";
-    quickDateContainer.style.flexWrap = "wrap";
-    quickDateContainer.style.marginBottom = "16px";
-    quickDateContainer.style.paddingLeft = "4px";
+    const quickDateContainer = contentEl.createDiv({ cls: "innerlevel-quick-pills" });
     const quickDateOptions = [
       { label: t.modalQuickToday, days: 0 },
       { label: t.modalQuickTomorrow, days: 1 },
@@ -21222,10 +21212,10 @@ var BatchScheduleModal = class extends import_obsidian2.Modal {
       { label: t.modalQuick2w, days: 14 }
     ];
     quickDateOptions.forEach((opt) => {
-      const btn = quickDateContainer.createEl("button", { text: opt.label });
-      btn.style.fontSize = "12px";
-      btn.style.padding = "4px 10px";
-      btn.style.borderRadius = "8px";
+      const btn = quickDateContainer.createEl("button", {
+        text: opt.label,
+        cls: "innerlevel-pill-btn"
+      });
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         this.selectedDate = addDays2(opt.days);
@@ -21238,7 +21228,7 @@ var BatchScheduleModal = class extends import_obsidian2.Modal {
       }
     });
     new import_obsidian2.Setting(contentEl).setName(t.modalArea).setDesc(t.batchModalAreaDesc).addText((text) => {
-      text.setPlaceholder("(Folder name / Nombre de carpeta)");
+      text.setPlaceholder("(Folder name / nombre de carpeta)");
       text.onChange((val) => {
         this.overrideArea = val.trim();
       });
@@ -21251,18 +21241,13 @@ var BatchScheduleModal = class extends import_obsidian2.Modal {
         this.selectedDuration = val.trim();
       });
     });
-    const quickDurationContainer = contentEl.createEl("div", { cls: "innerlevel-quick-pills" });
-    quickDurationContainer.style.display = "flex";
-    quickDurationContainer.style.gap = "6px";
-    quickDurationContainer.style.flexWrap = "wrap";
-    quickDurationContainer.style.marginBottom = "16px";
-    quickDurationContainer.style.paddingLeft = "4px";
+    const quickDurationContainer = contentEl.createDiv({ cls: "innerlevel-quick-pills" });
     const quickDurations = ["5m", "15m", "30m", "45m", "1h"];
     quickDurations.forEach((d) => {
-      const btn = quickDurationContainer.createEl("button", { text: d });
-      btn.style.fontSize = "12px";
-      btn.style.padding = "4px 10px";
-      btn.style.borderRadius = "8px";
+      const btn = quickDurationContainer.createEl("button", {
+        text: d,
+        cls: "innerlevel-pill-btn"
+      });
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         this.selectedDuration = d;
@@ -21279,28 +21264,26 @@ var BatchScheduleModal = class extends import_obsidian2.Modal {
         this.selectedType = val;
       });
     });
-    const actionsContainer = contentEl.createEl("div", { cls: "innerlevel-modal-actions" });
-    actionsContainer.style.display = "flex";
-    actionsContainer.style.justifyContent = "flex-end";
-    actionsContainer.style.gap = "10px";
-    actionsContainer.style.marginTop = "24px";
-    actionsContainer.style.paddingTop = "14px";
-    actionsContainer.style.borderTop = "1px solid var(--background-modifier-border)";
+    const actionsContainer = contentEl.createDiv({ cls: "innerlevel-modal-actions" });
     const cancelBtn = actionsContainer.createEl("button", { text: t.modalCancel });
     cancelBtn.addEventListener("click", () => this.close());
     const saveOnlyBtn = actionsContainer.createEl("button", { text: t.batchApplyToAll(this.files.length) });
-    saveOnlyBtn.addEventListener("click", async () => {
-      await this.applyBatch(lang);
-      this.close();
+    saveOnlyBtn.addEventListener("click", () => {
+      void (async () => {
+        await this.applyBatch(lang);
+        this.close();
+      })();
     });
     const saveAndSyncBtn = actionsContainer.createEl("button", {
       text: t.batchApplyAndSync(this.files.length),
       cls: "mod-cta"
     });
-    saveAndSyncBtn.addEventListener("click", async () => {
-      await this.applyBatch(lang);
-      this.close();
-      await this.plugin.syncDueNotes(true);
+    saveAndSyncBtn.addEventListener("click", () => {
+      void (async () => {
+        await this.applyBatch(lang);
+        this.close();
+        await this.plugin.syncDueNotes(true);
+      })();
     });
   }
   async applyBatch(lang) {
@@ -21521,7 +21504,8 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
     new BatchScheduleModal(this.app, this, files).open();
   }
   async applyReviewMetadata(file, metadata, lang) {
-    await this.app.fileManager.processFrontMatter(file, (fm) => {
+    await this.app.fileManager.processFrontMatter(file, (rawFm) => {
+      const fm = rawFm;
       if ("due_date" in fm) fm["due_date"] = metadata.date;
       else if ("proxima-revision" in fm) fm["proxima-revision"] = metadata.date;
       else if ("proxima_revision" in fm) fm["proxima_revision"] = metadata.date;
@@ -21699,9 +21683,17 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
         const { data: { session } } = await client.auth.getSession();
         const user = session?.user;
         if (user) {
-          const { data: userData } = await client.from("user_data").select("cards").eq("user_id", user.id).maybeSingle();
-          if (userData?.cards?.inventory && Array.isArray(userData.cards.inventory)) {
-            existingRemoteCardIds = new Set(userData.cards.inventory.map((c) => c.id));
+          const { data } = await client.from("user_data").select("cards").eq("user_id", user.id).maybeSingle();
+          const userData = data;
+          const inventory = userData?.cards?.inventory;
+          if (Array.isArray(inventory)) {
+            const ids = [];
+            for (const item of inventory) {
+              if (item && typeof item.id === "string") {
+                ids.push(item.id);
+              }
+            }
+            existingRemoteCardIds = new Set(ids);
           }
         }
       } catch (checkErr) {
@@ -21920,6 +21912,9 @@ var InnerLevelSettingTab = class extends import_obsidian3.PluginSettingTab {
     await this.plugin.saveSettings();
   }
   display() {
+    this.renderSettings();
+  }
+  renderSettings() {
     const { containerEl } = this;
     containerEl.empty();
     const t = this.plugin.t;
@@ -21934,7 +21929,7 @@ var InnerLevelSettingTab = class extends import_obsidian3.PluginSettingTab {
       (dropdown) => dropdown.addOption("auto", t.settingLanguageAuto).addOption("en", "English").addOption("es", "Espa\xF1ol").setValue(this.plugin.settings.language || "auto").onChange(async (val) => {
         this.plugin.settings.language = val;
         await this.plugin.saveSettings();
-        this.display();
+        this.renderSettings();
       })
     );
     new import_obsidian3.Setting(containerEl).setName(t.settingHeadingDefaults).setHeading();
@@ -21957,7 +21952,7 @@ var InnerLevelSettingTab = class extends import_obsidian3.PluginSettingTab {
       await this.plugin.saveSettings();
     }));
     new import_obsidian3.Setting(containerEl).setName(t.settingDefaultType).setDesc(t.settingDefaultTypeDesc).addDropdown(
-      (dropdown) => dropdown.addOption("tecnica", "T\xE9cnica / Technical").addOption("nota_estudio", "Nota de Estudio / Study Note").addOption("captura_rapida", "Captura R\xE1pida / Quick Capture").addOption("clase", "Clase / Class").addOption("problema", "Problema / Problem").addOption("permanente", "Permanente / Permanent").setValue(this.plugin.settings.defaultNoteType || "tecnica").onChange(async (value) => {
+      (dropdown) => dropdown.addOption("tecnica", "T\xE9cnica / technical").addOption("nota_estudio", "Nota de estudio / study note").addOption("captura_rapida", "Captura r\xE1pida / quick capture").addOption("clase", "Clase / class").addOption("problema", "Problema / problem").addOption("permanente", "Permanente / permanent").setValue(this.plugin.settings.defaultNoteType || "tecnica").onChange(async (value) => {
         this.plugin.settings.defaultNoteType = value;
         await this.plugin.saveSettings();
       })
@@ -22009,7 +22004,7 @@ function firstMeaningfulParagraph(body) {
 function getFMValue(frontmatter, ...keys) {
   for (const key of keys) {
     const val = frontmatter[key];
-    if (val !== void 0 && val !== null && val !== "") {
+    if (typeof val === "string" || typeof val === "number") {
       return String(val).trim();
     }
   }

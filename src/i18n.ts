@@ -298,7 +298,7 @@ export function detectLanguage(setting: Language = 'auto'): 'en' | 'es' {
 
     const nav = navigator.language || '';
     if (nav.toLowerCase().startsWith('es')) return 'es';
-  } catch (_e) {
+  } catch {
     // fallback
   }
 

@@ -259,7 +259,8 @@ export default class InnerLevelSyncPlugin extends Plugin {
     },
     lang: 'en' | 'es'
   ): Promise<void> {
-    await this.app.fileManager.processFrontMatter(file, (fm) => {
+    await this.app.fileManager.processFrontMatter(file, (rawFm) => {
+      const fm = rawFm as Record<string, unknown>;
       // 1. Date key: preserve existing key if present, otherwise follow language convention
       if ('due_date' in fm) fm['due_date'] = metadata.date;
       else if ('proxima-revision' in fm) fm['proxima-revision'] = metadata.date;
@@ -458,13 +459,26 @@ export default class InnerLevelSyncPlugin extends Plugin {
         const { data: { session } } = await client.auth.getSession();
         const user = session?.user;
         if (user) {
-          const { data: userData } = await client
+          interface RemoteUserData {
+            cards?: {
+              inventory?: Array<{ id?: string }>;
+            };
+          }
+          const { data } = await client
             .from('user_data')
             .select('cards')
             .eq('user_id', user.id)
             .maybeSingle();
-          if (userData?.cards?.inventory && Array.isArray(userData.cards.inventory)) {
-            existingRemoteCardIds = new Set(userData.cards.inventory.map((c: any) => c.id));
+          const userData = data as RemoteUserData | null;
+          const inventory = userData?.cards?.inventory;
+          if (Array.isArray(inventory)) {
+            const ids: string[] = [];
+            for (const item of inventory) {
+              if (item && typeof item.id === 'string') {
+                ids.push(item.id);
+              }
+            }
+            existingRemoteCardIds = new Set(ids);
           }
         }
       } catch (checkErr) {
@@ -702,6 +716,10 @@ class InnerLevelSettingTab extends PluginSettingTab {
   }
 
   display(): void {
+    this.renderSettings();
+  }
+
+  private renderSettings(): void {
     const { containerEl } = this;
     containerEl.empty();
     const t = this.plugin.t;
@@ -730,7 +748,7 @@ class InnerLevelSettingTab extends PluginSettingTab {
         .onChange(async (val) => {
           this.plugin.settings.language = val as Language;
           await this.plugin.saveSettings();
-          this.display(); // re-render setting tab with new language
+          this.renderSettings(); // re-render setting tab with new language
         })
       );
 
@@ -777,12 +795,12 @@ class InnerLevelSettingTab extends PluginSettingTab {
       .setName(t.settingDefaultType)
       .setDesc(t.settingDefaultTypeDesc)
       .addDropdown(dropdown => dropdown
-        .addOption('tecnica', 'Técnica / Technical')
-        .addOption('nota_estudio', 'Nota de Estudio / Study Note')
-        .addOption('captura_rapida', 'Captura Rápida / Quick Capture')
-        .addOption('clase', 'Clase / Class')
-        .addOption('problema', 'Problema / Problem')
-        .addOption('permanente', 'Permanente / Permanent')
+        .addOption('tecnica', 'Técnica / technical')
+        .addOption('nota_estudio', 'Nota de estudio / study note')
+        .addOption('captura_rapida', 'Captura rápida / quick capture')
+        .addOption('clase', 'Clase / class')
+        .addOption('problema', 'Problema / problem')
+        .addOption('permanente', 'Permanente / permanent')
         .setValue(this.plugin.settings.defaultNoteType || 'tecnica')
         .onChange(async (value) => {
           this.plugin.settings.defaultNoteType = value;
@@ -823,7 +841,7 @@ function firstMeaningfulParagraph(body: string): string { return body.split(/\n\
 function getFMValue(frontmatter: Record<string, unknown>, ...keys: string[]): string {
   for (const key of keys) {
     const val = frontmatter[key];
-    if (val !== undefined && val !== null && val !== '') {
+    if (typeof val === 'string' || typeof val === 'number') {
       return String(val).trim();
     }
   }

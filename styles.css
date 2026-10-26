@@ -1,0 +1,32 @@
+/* InnerLevel Sync - Modal & UI Styles */
+
+.innerlevel-modal-desc {
+  margin-bottom: 18px;
+}
+
+.innerlevel-date-input {
+  min-width: 160px;
+}
+
+.innerlevel-quick-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-left: 4px;
+}
+
+.innerlevel-pill-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.innerlevel-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--background-modifier-border);
+}

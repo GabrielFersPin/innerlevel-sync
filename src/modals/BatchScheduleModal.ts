@@ -41,11 +41,10 @@ export class BatchScheduleModal extends Modal {
     this.selectedDuration = `${mins}m`;
 
     this.titleEl.setText(t.batchModalTitle(this.files.length));
-    const descEl = contentEl.createEl('p', {
+    contentEl.createEl('p', {
       text: t.batchModalDesc(this.files.length),
-      cls: 'setting-item-description'
+      cls: 'setting-item-description innerlevel-modal-desc'
     });
-    descEl.style.marginBottom = '18px';
 
     // 1. Target Date Setting with Quick Pills
     let dateInputEl: HTMLInputElement;
@@ -56,18 +55,13 @@ export class BatchScheduleModal extends Modal {
         dateInputEl = text.inputEl;
         dateInputEl.type = 'date';
         dateInputEl.value = this.selectedDate;
-        dateInputEl.style.minWidth = '160px';
+        dateInputEl.addClass('innerlevel-date-input');
         text.onChange((val) => {
           this.selectedDate = val;
         });
       });
 
-    const quickDateContainer = contentEl.createEl('div', { cls: 'innerlevel-quick-pills' });
-    quickDateContainer.style.display = 'flex';
-    quickDateContainer.style.gap = '6px';
-    quickDateContainer.style.flexWrap = 'wrap';
-    quickDateContainer.style.marginBottom = '16px';
-    quickDateContainer.style.paddingLeft = '4px';
+    const quickDateContainer = contentEl.createDiv({ cls: 'innerlevel-quick-pills' });
 
     const quickDateOptions = [
       { label: t.modalQuickToday, days: 0 },
@@ -78,10 +72,10 @@ export class BatchScheduleModal extends Modal {
     ];
 
     quickDateOptions.forEach((opt) => {
-      const btn = quickDateContainer.createEl('button', { text: opt.label });
-      btn.style.fontSize = '12px';
-      btn.style.padding = '4px 10px';
-      btn.style.borderRadius = '8px';
+      const btn = quickDateContainer.createEl('button', {
+        text: opt.label,
+        cls: 'innerlevel-pill-btn'
+      });
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         this.selectedDate = addDays(opt.days);
@@ -99,7 +93,7 @@ export class BatchScheduleModal extends Modal {
       .setName(t.modalArea)
       .setDesc(t.batchModalAreaDesc)
       .addText((text) => {
-        text.setPlaceholder('(Folder name / Nombre de carpeta)');
+        text.setPlaceholder('(Folder name / nombre de carpeta)');
         text.onChange((val) => {
           this.overrideArea = val.trim();
         });
@@ -118,19 +112,14 @@ export class BatchScheduleModal extends Modal {
         });
       });
 
-    const quickDurationContainer = contentEl.createEl('div', { cls: 'innerlevel-quick-pills' });
-    quickDurationContainer.style.display = 'flex';
-    quickDurationContainer.style.gap = '6px';
-    quickDurationContainer.style.flexWrap = 'wrap';
-    quickDurationContainer.style.marginBottom = '16px';
-    quickDurationContainer.style.paddingLeft = '4px';
+    const quickDurationContainer = contentEl.createDiv({ cls: 'innerlevel-quick-pills' });
 
     const quickDurations = ['5m', '15m', '30m', '45m', '1h'];
     quickDurations.forEach((d) => {
-      const btn = quickDurationContainer.createEl('button', { text: d });
-      btn.style.fontSize = '12px';
-      btn.style.padding = '4px 10px';
-      btn.style.borderRadius = '8px';
+      const btn = quickDurationContainer.createEl('button', {
+        text: d,
+        cls: 'innerlevel-pill-btn'
+      });
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         this.selectedDuration = d;
@@ -162,31 +151,29 @@ export class BatchScheduleModal extends Modal {
       });
 
     // 5. Action Buttons Bar
-    const actionsContainer = contentEl.createEl('div', { cls: 'innerlevel-modal-actions' });
-    actionsContainer.style.display = 'flex';
-    actionsContainer.style.justifyContent = 'flex-end';
-    actionsContainer.style.gap = '10px';
-    actionsContainer.style.marginTop = '24px';
-    actionsContainer.style.paddingTop = '14px';
-    actionsContainer.style.borderTop = '1px solid var(--background-modifier-border)';
+    const actionsContainer = contentEl.createDiv({ cls: 'innerlevel-modal-actions' });
 
     const cancelBtn = actionsContainer.createEl('button', { text: t.modalCancel });
     cancelBtn.addEventListener('click', () => this.close());
 
     const saveOnlyBtn = actionsContainer.createEl('button', { text: t.batchApplyToAll(this.files.length) });
-    saveOnlyBtn.addEventListener('click', async () => {
-      await this.applyBatch(lang);
-      this.close();
+    saveOnlyBtn.addEventListener('click', () => {
+      void (async () => {
+        await this.applyBatch(lang);
+        this.close();
+      })();
     });
 
     const saveAndSyncBtn = actionsContainer.createEl('button', {
       text: t.batchApplyAndSync(this.files.length),
       cls: 'mod-cta'
     });
-    saveAndSyncBtn.addEventListener('click', async () => {
-      await this.applyBatch(lang);
-      this.close();
-      await this.plugin.syncDueNotes(true);
+    saveAndSyncBtn.addEventListener('click', () => {
+      void (async () => {
+        await this.applyBatch(lang);
+        this.close();
+        await this.plugin.syncDueNotes(true);
+      })();
     });
   }
 

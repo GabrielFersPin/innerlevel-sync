@@ -12,6 +12,16 @@ function addDays(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+function getFrontmatterString(fm: Record<string, unknown>, ...keys: string[]): string {
+  for (const k of keys) {
+    const val = fm[k];
+    if (typeof val === 'string' || typeof val === 'number') {
+      return String(val).trim();
+    }
+  }
+  return '';
+}
+
 export class ScheduleReviewModal extends Modal {
   private file: TFile;
   private plugin: InnerLevelSyncPlugin;
@@ -39,12 +49,12 @@ export class ScheduleReviewModal extends Modal {
     // Initial extraction from current frontmatter or folder fallback
     const fm = (this.app.metadataCache.getFileCache(this.file)?.frontmatter || {}) as Record<string, unknown>;
     
-    const existingDate = String(fm['due_date'] || fm['proxima-revision'] || fm['proxima_revision'] || fm['due'] || '').trim();
+    const existingDate = getFrontmatterString(fm, 'due_date', 'proxima-revision', 'proxima_revision', 'due');
     if (existingDate && !existingDate.includes('<%')) {
       this.selectedDate = existingDate;
     }
 
-    const existingDuration = String(fm['tiempo-repaso'] || fm['review_time'] || fm['duration'] || '').trim();
+    const existingDuration = getFrontmatterString(fm, 'tiempo-repaso', 'review_time', 'duration');
     if (existingDuration) {
       this.selectedDuration = existingDuration;
     } else {
@@ -52,7 +62,7 @@ export class ScheduleReviewModal extends Modal {
       this.selectedDuration = `${mins}m`;
     }
 
-    const existingArea = String(fm['area'] || fm['cards-deck'] || fm['deck'] || fm['topic'] || '').trim();
+    const existingArea = getFrontmatterString(fm, 'area', 'cards-deck', 'deck', 'topic');
     if (existingArea) {
       this.selectedArea = existingArea;
     } else if (this.file.parent && this.file.parent.name && this.file.parent.name !== '/') {
@@ -61,25 +71,24 @@ export class ScheduleReviewModal extends Modal {
       this.selectedArea = 'General';
     }
 
-    const existingType = String(fm['tipo_nota'] || fm['note_type'] || fm['type'] || fm['tipo'] || '').trim();
+    const existingType = getFrontmatterString(fm, 'tipo_nota', 'note_type', 'type', 'tipo');
     if (existingType) {
       this.selectedType = existingType;
     } else {
       this.selectedType = this.plugin.settings.defaultNoteType || (lang === 'es' ? 'tecnica' : 'technical');
     }
 
-    const existingLevel = String(fm['nivel-comprension'] || fm['understanding_level'] || fm['comprehension'] || '').trim();
+    const existingLevel = getFrontmatterString(fm, 'nivel-comprension', 'understanding_level', 'comprehension');
     if (existingLevel) {
       this.selectedLevel = existingLevel;
     }
 
     // Modal Title & Subtitle
     this.titleEl.setText(t.modalTitle);
-    const descEl = contentEl.createEl('p', {
+    contentEl.createEl('p', {
       text: t.modalDesc(this.file.basename),
-      cls: 'setting-item-description'
+      cls: 'setting-item-description innerlevel-modal-desc'
     });
-    descEl.style.marginBottom = '18px';
 
     // 1. Target Date Setting with Quick Pills
     let dateInputEl: HTMLInputElement;
@@ -90,19 +99,14 @@ export class ScheduleReviewModal extends Modal {
         dateInputEl = text.inputEl;
         dateInputEl.type = 'date';
         dateInputEl.value = this.selectedDate;
-        dateInputEl.style.minWidth = '160px';
+        dateInputEl.addClass('innerlevel-date-input');
         text.onChange((val) => {
           this.selectedDate = val;
         });
       });
 
     // Quick Date Pills Container
-    const quickDateContainer = contentEl.createEl('div', { cls: 'innerlevel-quick-pills' });
-    quickDateContainer.style.display = 'flex';
-    quickDateContainer.style.gap = '6px';
-    quickDateContainer.style.flexWrap = 'wrap';
-    quickDateContainer.style.marginBottom = '16px';
-    quickDateContainer.style.paddingLeft = '4px';
+    const quickDateContainer = contentEl.createDiv({ cls: 'innerlevel-quick-pills' });
 
     const quickDateOptions = [
       { label: t.modalQuickToday, days: 0 },
@@ -113,10 +117,10 @@ export class ScheduleReviewModal extends Modal {
     ];
 
     quickDateOptions.forEach((opt) => {
-      const btn = quickDateContainer.createEl('button', { text: opt.label });
-      btn.style.fontSize = '12px';
-      btn.style.padding = '4px 10px';
-      btn.style.borderRadius = '8px';
+      const btn = quickDateContainer.createEl('button', {
+        text: opt.label,
+        cls: 'innerlevel-pill-btn'
+      });
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         this.selectedDate = addDays(opt.days);
@@ -154,19 +158,14 @@ export class ScheduleReviewModal extends Modal {
         });
       });
 
-    const quickDurationContainer = contentEl.createEl('div', { cls: 'innerlevel-quick-pills' });
-    quickDurationContainer.style.display = 'flex';
-    quickDurationContainer.style.gap = '6px';
-    quickDurationContainer.style.flexWrap = 'wrap';
-    quickDurationContainer.style.marginBottom = '16px';
-    quickDurationContainer.style.paddingLeft = '4px';
+    const quickDurationContainer = contentEl.createDiv({ cls: 'innerlevel-quick-pills' });
 
     const quickDurations = ['5m', '15m', '30m', '45m', '1h'];
     quickDurations.forEach((d) => {
-      const btn = quickDurationContainer.createEl('button', { text: d });
-      btn.style.fontSize = '12px';
-      btn.style.padding = '4px 10px';
-      btn.style.borderRadius = '8px';
+      const btn = quickDurationContainer.createEl('button', {
+        text: d,
+        cls: 'innerlevel-pill-btn'
+      });
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         this.selectedDuration = d;
@@ -214,31 +213,29 @@ export class ScheduleReviewModal extends Modal {
       });
 
     // 6. Action Buttons Bar
-    const actionsContainer = contentEl.createEl('div', { cls: 'innerlevel-modal-actions' });
-    actionsContainer.style.display = 'flex';
-    actionsContainer.style.justifyContent = 'flex-end';
-    actionsContainer.style.gap = '10px';
-    actionsContainer.style.marginTop = '24px';
-    actionsContainer.style.paddingTop = '14px';
-    actionsContainer.style.borderTop = '1px solid var(--background-modifier-border)';
+    const actionsContainer = contentEl.createDiv({ cls: 'innerlevel-modal-actions' });
 
     const cancelBtn = actionsContainer.createEl('button', { text: t.modalCancel });
     cancelBtn.addEventListener('click', () => this.close());
 
     const saveOnlyBtn = actionsContainer.createEl('button', { text: t.modalSaveOnly });
-    saveOnlyBtn.addEventListener('click', async () => {
-      await this.saveMetadata(lang);
-      this.close();
+    saveOnlyBtn.addEventListener('click', () => {
+      void (async () => {
+        await this.saveMetadata(lang);
+        this.close();
+      })();
     });
 
     const saveAndSyncBtn = actionsContainer.createEl('button', {
       text: t.modalSaveAndSync,
       cls: 'mod-cta'
     });
-    saveAndSyncBtn.addEventListener('click', async () => {
-      await this.saveMetadata(lang);
-      this.close();
-      await this.plugin.syncDueNotes(true);
+    saveAndSyncBtn.addEventListener('click', () => {
+      void (async () => {
+        await this.saveMetadata(lang);
+        this.close();
+        await this.plugin.syncDueNotes(true);
+      })();
     });
   }
 
