@@ -22,7 +22,7 @@ __export(main_exports, {
   default: () => InnerLevelSyncPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // node_modules/@supabase/supabase-js/dist/tracingRegistry.mjs
 var EXTRACTOR_KEY = Symbol.for("@supabase/supabase-js.traceContextExtractor");
@@ -20786,6 +20786,544 @@ function shouldShowDeprecationWarning() {
 }
 if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 20 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 22 or later. For more information, visit: https://github.com/orgs/supabase/discussions/45715");
 
+// src/i18n.ts
+var en = {
+  ribbonTooltip: "InnerLevel: Sync due notes",
+  ribbonSyncDue: "Sync today's due notes",
+  ribbonSyncDueArea: "Sync today's due notes (by area)",
+  ribbonSyncDueIndividual: "Sync today's due notes (individual)",
+  ribbonResyncDue: "Resync today's due notes (force)",
+  ribbonCaptureCurrent: "Capture selection / current note",
+  ribbonOpenInnerLevel: "Open InnerLevel",
+  cmdScheduleReview: "Schedule review for current note",
+  cmdEnableReviewToday: "Enable review for today (1-click)",
+  cmdCaptureCurrent: "Capture selection / current note",
+  cmdSyncDue: "Sync today's due notes",
+  cmdSyncDueArea: "Sync today's due notes (by area)",
+  cmdSyncDueIndividual: "Sync today's due notes (individual)",
+  cmdResyncDue: "Resync today's due notes (force)",
+  cmdOpenInnerLevel: "Open InnerLevel",
+  menuScheduleReview: "InnerLevel: Schedule review...",
+  menuAddReviewToday: "InnerLevel: Enable review for today",
+  menuBatchReview: (count) => `InnerLevel: Schedule review for ${count} notes...`,
+  modalTitle: "Schedule Review in InnerLevel",
+  modalDesc: (filename) => `Configure spaced repetition review for "${filename}"`,
+  modalTargetDate: "Review Date",
+  modalTargetDateDesc: "When this note should be reviewed in InnerLevel",
+  modalQuickToday: "Today",
+  modalQuickTomorrow: "Tomorrow",
+  modalQuick3d: "+3 Days",
+  modalQuick1w: "+1 Week",
+  modalQuick2w: "+2 Weeks",
+  modalArea: "Area / Deck",
+  modalAreaDesc: "Topic grouping (defaults to parent folder)",
+  modalDuration: "Estimated Duration",
+  modalDurationDesc: "Time needed to review this note (e.g. 15m, 30m, 1h)",
+  modalNoteType: "Note Type",
+  modalNoteTypeDesc: "Classification for InnerLevel rune forging",
+  modalLevel: "Comprehension Level",
+  modalLevelDesc: "Current understanding of this topic",
+  modalSaveAndSync: "Save & Sync to InnerLevel",
+  modalSaveOnly: "Save to Note",
+  modalCancel: "Cancel",
+  batchModalTitle: (count) => `Schedule ${count} notes in InnerLevel`,
+  batchModalDesc: (count) => `Apply review schedule to ${count} selected Markdown notes`,
+  batchModalAreaDesc: "Leave empty to preserve each note's folder name",
+  batchApplyToAll: (count) => `Apply to all ${count} notes`,
+  batchApplyAndSync: (count) => `Apply & Sync to InnerLevel`,
+  typeTechnical: "Technical Note",
+  typeStudyNote: "Study Note",
+  typeQuickCapture: "Quick Capture",
+  typeClass: "Class / Lecture",
+  typeProblem: "Problem / Exercise",
+  typePermanent: "Permanent Note",
+  levelPending: "Pending / New",
+  levelDifficult: "Needs Review (Difficult)",
+  levelGood: "Good Understanding",
+  levelMastered: "Mastered",
+  noticeReviewScheduled: (filename, date) => `InnerLevel: Review scheduled for "${filename}" on ${date}`,
+  noticeBatchScheduled: (count) => `InnerLevel: Configured review for ${count} notes`,
+  noticeNoMarkdownOpen: "Open a Markdown note to schedule review",
+  noticeNoDueNotes: "InnerLevel: No due notes found for review today",
+  noticeNotesAlreadySynced: (count) => `InnerLevel: All ${count} due notes are already in InnerLevel. Use 'Resync (force)' to re-send.`,
+  noticeSyncSuccess: (count, areas) => `InnerLevel: Synced ${count} note(s) across ${areas} area(s)`,
+  noticeSyncSuccessIndividual: (count) => `InnerLevel: Synced ${count} individual note(s)`,
+  noticeCaptured: (filename) => `InnerLevel: Captured "${filename}"`,
+  noticeConnectionOk: "InnerLevel: Connection successful",
+  settingHeadingConfig: "Configuration",
+  settingHeadingDefaults: "Review Defaults",
+  settingLanguage: "Plugin Language",
+  settingLanguageDesc: "Choose UI language or follow Obsidian's language",
+  settingLanguageAuto: "Auto (Follow Obsidian)",
+  settingSyncMode: "Sync Mode",
+  settingSyncModeDesc: "Group notes into area summary cards or create individual cards",
+  settingSyncModeArea: "By Area (Grouped with total time)",
+  settingSyncModeIndividual: "Individual (One card per note)",
+  settingAutoSync: "Automatic daily sync",
+  settingAutoSyncDesc: "Sync once on vault startup",
+  settingDefaultDuration: "Default duration (hours)",
+  settingDefaultDurationDesc: "Fallback duration when not specified in note",
+  settingDefaultEnergy: "Default energy cost",
+  settingDefaultEnergyDesc: "Fallback energy cost in InnerLevel",
+  settingDefaultType: "Default note type",
+  settingDefaultTypeDesc: "Used when quickly enabling review for a note",
+  settingConnectionBtn: "Test Connection",
+  settingConnectionDesc: "Use your existing InnerLevel account. Does not create new users."
+};
+var es = {
+  ribbonTooltip: "InnerLevel: Sincronizar notas pendientes",
+  ribbonSyncDue: "Sincronizar notas para hoy",
+  ribbonSyncDueArea: "Sincronizar notas para hoy (por \xE1rea)",
+  ribbonSyncDueIndividual: "Sincronizar notas para hoy (individual)",
+  ribbonResyncDue: "Resincronizar notas para hoy (forzar)",
+  ribbonCaptureCurrent: "Capturar selecci\xF3n / nota actual",
+  ribbonOpenInnerLevel: "Abrir InnerLevel",
+  cmdScheduleReview: "Programar repaso para la nota actual",
+  cmdEnableReviewToday: "Habilitar repaso para hoy (1-clic)",
+  cmdCaptureCurrent: "Capturar selecci\xF3n / nota actual",
+  cmdSyncDue: "Sincronizar notas para hoy",
+  cmdSyncDueArea: "Sincronizar notas para hoy (por \xE1rea)",
+  cmdSyncDueIndividual: "Sincronizar notas para hoy (individual)",
+  cmdResyncDue: "Resincronizar notas para hoy (forzar)",
+  cmdOpenInnerLevel: "Abrir InnerLevel",
+  menuScheduleReview: "InnerLevel: Programar repaso...",
+  menuAddReviewToday: "InnerLevel: Habilitar repaso para hoy",
+  menuBatchReview: (count) => `InnerLevel: Programar repaso para ${count} notas...`,
+  modalTitle: "Programar Repaso en InnerLevel",
+  modalDesc: (filename) => `Configurar repaso espaciado para "${filename}"`,
+  modalTargetDate: "Fecha de Repaso",
+  modalTargetDateDesc: "Cu\xE1ndo debe aparecer esta nota para repasar en InnerLevel",
+  modalQuickToday: "Hoy",
+  modalQuickTomorrow: "Ma\xF1ana",
+  modalQuick3d: "+3 D\xEDas",
+  modalQuick1w: "+1 Semana",
+  modalQuick2w: "+2 Semanas",
+  modalArea: "\xC1rea / Baraja",
+  modalAreaDesc: "Agrupaci\xF3n tem\xE1tica (por defecto toma la carpeta)",
+  modalDuration: "Tiempo Estimado",
+  modalDurationDesc: "Tiempo necesario para repasar esta nota (ej. 15m, 30m, 1h)",
+  modalNoteType: "Tipo de Nota",
+  modalNoteTypeDesc: "Clasificaci\xF3n para el forjado del fragmento en InnerLevel",
+  modalLevel: "Nivel de Comprensi\xF3n",
+  modalLevelDesc: "Dominio actual sobre este tema",
+  modalSaveAndSync: "Guardar y Sincronizar a InnerLevel",
+  modalSaveOnly: "Guardar en la Nota",
+  modalCancel: "Cancelar",
+  batchModalTitle: (count) => `Programar ${count} notas en InnerLevel`,
+  batchModalDesc: (count) => `Aplicar programaci\xF3n de repaso a las ${count} notas seleccionadas`,
+  batchModalAreaDesc: "Deja en blanco para conservar el nombre de carpeta de cada nota",
+  batchApplyToAll: (count) => `Aplicar a las ${count} notas`,
+  batchApplyAndSync: (count) => `Aplicar y Sincronizar a InnerLevel`,
+  typeTechnical: "Nota T\xE9cnica",
+  typeStudyNote: "Nota de Estudio",
+  typeQuickCapture: "Captura R\xE1pida",
+  typeClass: "Clase / Lecci\xF3n",
+  typeProblem: "Problema / Ejercicio",
+  typePermanent: "Nota Permanente",
+  levelPending: "Pendiente / Nueva",
+  levelDifficult: "Requiere Repaso (Dif\xEDcil)",
+  levelGood: "Buena Comprensi\xF3n",
+  levelMastered: "Dominada",
+  noticeReviewScheduled: (filename, date) => `InnerLevel: Repaso programado para "${filename}" el ${date}`,
+  noticeBatchScheduled: (count) => `InnerLevel: Se configur\xF3 el repaso para ${count} notas`,
+  noticeNoMarkdownOpen: "Abre una nota Markdown para programar el repaso",
+  noticeNoDueNotes: "InnerLevel: No hay notas con repaso pendiente para hoy",
+  noticeNotesAlreadySynced: (count) => `InnerLevel: Las ${count} notas pendientes ya est\xE1n en InnerLevel. Usa 'Resync (force)' para reenviarlas.`,
+  noticeSyncSuccess: (count, areas) => `InnerLevel: Sincronizadas ${count} nota(s) en ${areas} \xE1rea(s)`,
+  noticeSyncSuccessIndividual: (count) => `InnerLevel: Sincronizadas ${count} nota(s) individuales`,
+  noticeCaptured: (filename) => `InnerLevel: Capturada "${filename}"`,
+  noticeConnectionOk: "InnerLevel: Conexi\xF3n correcta",
+  settingHeadingConfig: "Configuraci\xF3n",
+  settingHeadingDefaults: "Valores por Defecto de Repaso",
+  settingLanguage: "Idioma del Plugin",
+  settingLanguageDesc: "Elige el idioma de la interfaz o sigue el idioma de Obsidian",
+  settingLanguageAuto: "Autom\xE1tico (Idioma de Obsidian)",
+  settingSyncMode: "Modo de Sincronizaci\xF3n",
+  settingSyncModeDesc: "Agrupar notas en cartas resumen por \xE1rea o crear cartas individuales",
+  settingSyncModeArea: "Por \xC1rea (Agrupadas con tiempo acumulado)",
+  settingSyncModeIndividual: "Individual (Una carta por nota)",
+  settingAutoSync: "Sincronizaci\xF3n diaria autom\xE1tica",
+  settingAutoSyncDesc: "Sincroniza una vez al abrir Obsidian",
+  settingDefaultDuration: "Duraci\xF3n por defecto (horas)",
+  settingDefaultDurationDesc: "Duraci\xF3n de respaldo si no se especifica en la nota",
+  settingDefaultEnergy: "Coste de energ\xEDa por defecto",
+  settingDefaultEnergyDesc: "Coste de energ\xEDa en InnerLevel",
+  settingDefaultType: "Tipo de nota por defecto",
+  settingDefaultTypeDesc: "Usado al habilitar r\xE1pidamente el repaso de una nota",
+  settingConnectionBtn: "Probar Conexi\xF3n",
+  settingConnectionDesc: "Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos."
+};
+function detectLanguage(setting = "auto") {
+  if (setting === "en") return "en";
+  if (setting === "es") return "es";
+  try {
+    const momentLocale = window.moment?.locale?.() || "";
+    if (momentLocale.toLowerCase().startsWith("es")) return "es";
+    const docLang = document.documentElement.lang || "";
+    if (docLang.toLowerCase().startsWith("es")) return "es";
+    const nav = navigator.language || "";
+    if (nav.toLowerCase().startsWith("es")) return "es";
+  } catch (_e) {
+  }
+  return "en";
+}
+function getTranslations(lang) {
+  return lang === "es" ? es : en;
+}
+
+// src/modals/ScheduleReviewModal.ts
+var import_obsidian = require("obsidian");
+function isoToday() {
+  return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+}
+function addDays(days) {
+  const d = /* @__PURE__ */ new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+var ScheduleReviewModal = class extends import_obsidian.Modal {
+  constructor(app, plugin, file) {
+    super(app);
+    this.selectedDate = isoToday();
+    this.selectedDuration = "15m";
+    this.selectedArea = "";
+    this.selectedType = "tecnica";
+    this.selectedLevel = "pendiente";
+    this.plugin = plugin;
+    this.file = file;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("innerlevel-schedule-modal");
+    const lang = detectLanguage(this.plugin.settings.language);
+    const t = getTranslations(lang);
+    const fm = this.app.metadataCache.getFileCache(this.file)?.frontmatter || {};
+    const existingDate = String(fm["due_date"] || fm["proxima-revision"] || fm["proxima_revision"] || fm["due"] || "").trim();
+    if (existingDate && !existingDate.includes("<%")) {
+      this.selectedDate = existingDate;
+    }
+    const existingDuration = String(fm["tiempo-repaso"] || fm["review_time"] || fm["duration"] || "").trim();
+    if (existingDuration) {
+      this.selectedDuration = existingDuration;
+    } else {
+      const mins = Math.round((this.plugin.settings.defaultDuration || 0.5) * 60);
+      this.selectedDuration = `${mins}m`;
+    }
+    const existingArea = String(fm["area"] || fm["cards-deck"] || fm["deck"] || fm["topic"] || "").trim();
+    if (existingArea) {
+      this.selectedArea = existingArea;
+    } else if (this.file.parent && this.file.parent.name && this.file.parent.name !== "/") {
+      this.selectedArea = this.file.parent.name;
+    } else {
+      this.selectedArea = "General";
+    }
+    const existingType = String(fm["tipo_nota"] || fm["note_type"] || fm["type"] || fm["tipo"] || "").trim();
+    if (existingType) {
+      this.selectedType = existingType;
+    } else {
+      this.selectedType = this.plugin.settings.defaultNoteType || (lang === "es" ? "tecnica" : "technical");
+    }
+    const existingLevel = String(fm["nivel-comprension"] || fm["understanding_level"] || fm["comprehension"] || "").trim();
+    if (existingLevel) {
+      this.selectedLevel = existingLevel;
+    }
+    this.titleEl.setText(t.modalTitle);
+    const descEl = contentEl.createEl("p", {
+      text: t.modalDesc(this.file.basename),
+      cls: "setting-item-description"
+    });
+    descEl.style.marginBottom = "18px";
+    let dateInputEl;
+    new import_obsidian.Setting(contentEl).setName(t.modalTargetDate).setDesc(t.modalTargetDateDesc).addText((text) => {
+      dateInputEl = text.inputEl;
+      dateInputEl.type = "date";
+      dateInputEl.value = this.selectedDate;
+      dateInputEl.style.minWidth = "160px";
+      text.onChange((val) => {
+        this.selectedDate = val;
+      });
+    });
+    const quickDateContainer = contentEl.createEl("div", { cls: "innerlevel-quick-pills" });
+    quickDateContainer.style.display = "flex";
+    quickDateContainer.style.gap = "6px";
+    quickDateContainer.style.flexWrap = "wrap";
+    quickDateContainer.style.marginBottom = "16px";
+    quickDateContainer.style.paddingLeft = "4px";
+    const quickDateOptions = [
+      { label: t.modalQuickToday, days: 0 },
+      { label: t.modalQuickTomorrow, days: 1 },
+      { label: t.modalQuick3d, days: 3 },
+      { label: t.modalQuick1w, days: 7 },
+      { label: t.modalQuick2w, days: 14 }
+    ];
+    quickDateOptions.forEach((opt) => {
+      const btn = quickDateContainer.createEl("button", { text: opt.label });
+      btn.style.fontSize = "12px";
+      btn.style.padding = "4px 10px";
+      btn.style.borderRadius = "8px";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.selectedDate = addDays(opt.days);
+        dateInputEl.value = this.selectedDate;
+        quickDateContainer.querySelectorAll("button").forEach((b) => b.removeClass("mod-cta"));
+        btn.addClass("mod-cta");
+      });
+      if (opt.days === 0 && this.selectedDate === isoToday()) {
+        btn.addClass("mod-cta");
+      }
+    });
+    new import_obsidian.Setting(contentEl).setName(t.modalArea).setDesc(t.modalAreaDesc).addText((text) => {
+      text.setValue(this.selectedArea);
+      text.onChange((val) => {
+        this.selectedArea = val.trim();
+      });
+    });
+    let durationInputEl;
+    new import_obsidian.Setting(contentEl).setName(t.modalDuration).setDesc(t.modalDurationDesc).addText((text) => {
+      durationInputEl = text.inputEl;
+      text.setValue(this.selectedDuration);
+      text.onChange((val) => {
+        this.selectedDuration = val.trim();
+      });
+    });
+    const quickDurationContainer = contentEl.createEl("div", { cls: "innerlevel-quick-pills" });
+    quickDurationContainer.style.display = "flex";
+    quickDurationContainer.style.gap = "6px";
+    quickDurationContainer.style.flexWrap = "wrap";
+    quickDurationContainer.style.marginBottom = "16px";
+    quickDurationContainer.style.paddingLeft = "4px";
+    const quickDurations = ["5m", "15m", "30m", "45m", "1h"];
+    quickDurations.forEach((d) => {
+      const btn = quickDurationContainer.createEl("button", { text: d });
+      btn.style.fontSize = "12px";
+      btn.style.padding = "4px 10px";
+      btn.style.borderRadius = "8px";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.selectedDuration = d;
+        durationInputEl.value = d;
+        quickDurationContainer.querySelectorAll("button").forEach((b) => b.removeClass("mod-cta"));
+        btn.addClass("mod-cta");
+      });
+      if (this.selectedDuration === d) {
+        btn.addClass("mod-cta");
+      }
+    });
+    new import_obsidian.Setting(contentEl).setName(t.modalNoteType).setDesc(t.modalNoteTypeDesc).addDropdown((dropdown) => {
+      dropdown.addOption(lang === "es" ? "tecnica" : "technical", t.typeTechnical).addOption(lang === "es" ? "nota_estudio" : "study_note", t.typeStudyNote).addOption(lang === "es" ? "captura_rapida" : "quick_capture", t.typeQuickCapture).addOption(lang === "es" ? "clase" : "class", t.typeClass).addOption(lang === "es" ? "problema" : "problem", t.typeProblem).addOption(lang === "es" ? "permanente" : "permanent", t.typePermanent).setValue(this.selectedType).onChange((val) => {
+        this.selectedType = val;
+      });
+    });
+    new import_obsidian.Setting(contentEl).setName(t.modalLevel).setDesc(t.modalLevelDesc).addDropdown((dropdown) => {
+      dropdown.addOption(lang === "es" ? "pendiente" : "pending", t.levelPending).addOption(lang === "es" ? "dificil" : "difficult", t.levelDifficult).addOption(lang === "es" ? "bien" : "good", t.levelGood).addOption(lang === "es" ? "completado" : "mastered", t.levelMastered).setValue(this.selectedLevel).onChange((val) => {
+        this.selectedLevel = val;
+      });
+    });
+    const actionsContainer = contentEl.createEl("div", { cls: "innerlevel-modal-actions" });
+    actionsContainer.style.display = "flex";
+    actionsContainer.style.justifyContent = "flex-end";
+    actionsContainer.style.gap = "10px";
+    actionsContainer.style.marginTop = "24px";
+    actionsContainer.style.paddingTop = "14px";
+    actionsContainer.style.borderTop = "1px solid var(--background-modifier-border)";
+    const cancelBtn = actionsContainer.createEl("button", { text: t.modalCancel });
+    cancelBtn.addEventListener("click", () => this.close());
+    const saveOnlyBtn = actionsContainer.createEl("button", { text: t.modalSaveOnly });
+    saveOnlyBtn.addEventListener("click", async () => {
+      await this.saveMetadata(lang);
+      this.close();
+    });
+    const saveAndSyncBtn = actionsContainer.createEl("button", {
+      text: t.modalSaveAndSync,
+      cls: "mod-cta"
+    });
+    saveAndSyncBtn.addEventListener("click", async () => {
+      await this.saveMetadata(lang);
+      this.close();
+      await this.plugin.syncDueNotes(true);
+    });
+  }
+  async saveMetadata(lang) {
+    await this.plugin.applyReviewMetadata(
+      this.file,
+      {
+        date: this.selectedDate,
+        duration: this.selectedDuration,
+        area: this.selectedArea || "General",
+        noteType: this.selectedType,
+        level: this.selectedLevel
+      },
+      lang
+    );
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+
+// src/modals/BatchScheduleModal.ts
+var import_obsidian2 = require("obsidian");
+function isoToday2() {
+  return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+}
+function addDays2(days) {
+  const d = /* @__PURE__ */ new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+var BatchScheduleModal = class extends import_obsidian2.Modal {
+  constructor(app, plugin, files) {
+    super(app);
+    this.selectedDate = isoToday2();
+    this.selectedDuration = "15m";
+    this.overrideArea = "";
+    this.selectedType = "tecnica";
+    this.selectedLevel = "pendiente";
+    this.plugin = plugin;
+    this.files = files;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("innerlevel-batch-modal");
+    const lang = detectLanguage(this.plugin.settings.language);
+    const t = getTranslations(lang);
+    this.selectedType = this.plugin.settings.defaultNoteType || (lang === "es" ? "tecnica" : "technical");
+    const mins = Math.round((this.plugin.settings.defaultDuration || 0.5) * 60);
+    this.selectedDuration = `${mins}m`;
+    this.titleEl.setText(t.batchModalTitle(this.files.length));
+    const descEl = contentEl.createEl("p", {
+      text: t.batchModalDesc(this.files.length),
+      cls: "setting-item-description"
+    });
+    descEl.style.marginBottom = "18px";
+    let dateInputEl;
+    new import_obsidian2.Setting(contentEl).setName(t.modalTargetDate).setDesc(t.modalTargetDateDesc).addText((text) => {
+      dateInputEl = text.inputEl;
+      dateInputEl.type = "date";
+      dateInputEl.value = this.selectedDate;
+      dateInputEl.style.minWidth = "160px";
+      text.onChange((val) => {
+        this.selectedDate = val;
+      });
+    });
+    const quickDateContainer = contentEl.createEl("div", { cls: "innerlevel-quick-pills" });
+    quickDateContainer.style.display = "flex";
+    quickDateContainer.style.gap = "6px";
+    quickDateContainer.style.flexWrap = "wrap";
+    quickDateContainer.style.marginBottom = "16px";
+    quickDateContainer.style.paddingLeft = "4px";
+    const quickDateOptions = [
+      { label: t.modalQuickToday, days: 0 },
+      { label: t.modalQuickTomorrow, days: 1 },
+      { label: t.modalQuick3d, days: 3 },
+      { label: t.modalQuick1w, days: 7 },
+      { label: t.modalQuick2w, days: 14 }
+    ];
+    quickDateOptions.forEach((opt) => {
+      const btn = quickDateContainer.createEl("button", { text: opt.label });
+      btn.style.fontSize = "12px";
+      btn.style.padding = "4px 10px";
+      btn.style.borderRadius = "8px";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.selectedDate = addDays2(opt.days);
+        dateInputEl.value = this.selectedDate;
+        quickDateContainer.querySelectorAll("button").forEach((b) => b.removeClass("mod-cta"));
+        btn.addClass("mod-cta");
+      });
+      if (opt.days === 0 && this.selectedDate === isoToday2()) {
+        btn.addClass("mod-cta");
+      }
+    });
+    new import_obsidian2.Setting(contentEl).setName(t.modalArea).setDesc(t.batchModalAreaDesc).addText((text) => {
+      text.setPlaceholder("(Folder name / Nombre de carpeta)");
+      text.onChange((val) => {
+        this.overrideArea = val.trim();
+      });
+    });
+    let durationInputEl;
+    new import_obsidian2.Setting(contentEl).setName(t.modalDuration).setDesc(t.modalDurationDesc).addText((text) => {
+      durationInputEl = text.inputEl;
+      text.setValue(this.selectedDuration);
+      text.onChange((val) => {
+        this.selectedDuration = val.trim();
+      });
+    });
+    const quickDurationContainer = contentEl.createEl("div", { cls: "innerlevel-quick-pills" });
+    quickDurationContainer.style.display = "flex";
+    quickDurationContainer.style.gap = "6px";
+    quickDurationContainer.style.flexWrap = "wrap";
+    quickDurationContainer.style.marginBottom = "16px";
+    quickDurationContainer.style.paddingLeft = "4px";
+    const quickDurations = ["5m", "15m", "30m", "45m", "1h"];
+    quickDurations.forEach((d) => {
+      const btn = quickDurationContainer.createEl("button", { text: d });
+      btn.style.fontSize = "12px";
+      btn.style.padding = "4px 10px";
+      btn.style.borderRadius = "8px";
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.selectedDuration = d;
+        durationInputEl.value = d;
+        quickDurationContainer.querySelectorAll("button").forEach((b) => b.removeClass("mod-cta"));
+        btn.addClass("mod-cta");
+      });
+      if (this.selectedDuration === d) {
+        btn.addClass("mod-cta");
+      }
+    });
+    new import_obsidian2.Setting(contentEl).setName(t.modalNoteType).setDesc(t.modalNoteTypeDesc).addDropdown((dropdown) => {
+      dropdown.addOption(lang === "es" ? "tecnica" : "technical", t.typeTechnical).addOption(lang === "es" ? "nota_estudio" : "study_note", t.typeStudyNote).addOption(lang === "es" ? "captura_rapida" : "quick_capture", t.typeQuickCapture).addOption(lang === "es" ? "clase" : "class", t.typeClass).addOption(lang === "es" ? "problema" : "problem", t.typeProblem).addOption(lang === "es" ? "permanente" : "permanent", t.typePermanent).setValue(this.selectedType).onChange((val) => {
+        this.selectedType = val;
+      });
+    });
+    const actionsContainer = contentEl.createEl("div", { cls: "innerlevel-modal-actions" });
+    actionsContainer.style.display = "flex";
+    actionsContainer.style.justifyContent = "flex-end";
+    actionsContainer.style.gap = "10px";
+    actionsContainer.style.marginTop = "24px";
+    actionsContainer.style.paddingTop = "14px";
+    actionsContainer.style.borderTop = "1px solid var(--background-modifier-border)";
+    const cancelBtn = actionsContainer.createEl("button", { text: t.modalCancel });
+    cancelBtn.addEventListener("click", () => this.close());
+    const saveOnlyBtn = actionsContainer.createEl("button", { text: t.batchApplyToAll(this.files.length) });
+    saveOnlyBtn.addEventListener("click", async () => {
+      await this.applyBatch(lang);
+      this.close();
+    });
+    const saveAndSyncBtn = actionsContainer.createEl("button", {
+      text: t.batchApplyAndSync(this.files.length),
+      cls: "mod-cta"
+    });
+    saveAndSyncBtn.addEventListener("click", async () => {
+      await this.applyBatch(lang);
+      this.close();
+      await this.plugin.syncDueNotes(true);
+    });
+  }
+  async applyBatch(lang) {
+    for (const file of this.files) {
+      const area = this.overrideArea || (file.parent && file.parent.name && file.parent.name !== "/" ? file.parent.name : "General");
+      await this.plugin.applyReviewMetadata(
+        file,
+        {
+          date: this.selectedDate,
+          duration: this.selectedDuration,
+          area,
+          noteType: this.selectedType,
+          level: this.selectedLevel
+        },
+        lang
+      );
+    }
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+
 // src/main.ts
 var INNERLEVEL_ICON_SVG = `
 <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
@@ -20810,7 +21348,9 @@ var DEFAULT_SETTINGS = {
   defaultEnergyCost: 15,
   dashboardPath: "Dashboard_General.md",
   autoSyncToday: false,
-  syncMode: "area"
+  syncMode: "area",
+  language: "auto",
+  defaultNoteType: "tecnica"
 };
 var DUE_TYPES = /* @__PURE__ */ new Set([
   // Spanish
@@ -20830,68 +21370,217 @@ var DUE_TYPES = /* @__PURE__ */ new Set([
   "class",
   "work"
 ]);
-var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
+var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
   constructor() {
     super(...arguments);
     this.client = null;
   }
+  getLang() {
+    return detectLanguage(this.settings?.language || "auto");
+  }
+  get t() {
+    return getTranslations(this.getLang());
+  }
   async onload() {
     await this.loadSettings();
     this.addSettingTab(new InnerLevelSettingTab(this.app, this));
-    (0, import_obsidian.addIcon)("innerlevel-peak", INNERLEVEL_ICON_SVG);
-    (0, import_obsidian.addIcon)("innerlevel-crystal", INNERLEVEL_ICON_SVG);
-    const ribbonIconEl = this.addRibbonIcon("innerlevel-peak", "InnerLevel: Sync due notes", (_evt) => {
+    (0, import_obsidian3.addIcon)("innerlevel-peak", INNERLEVEL_ICON_SVG);
+    (0, import_obsidian3.addIcon)("innerlevel-crystal", INNERLEVEL_ICON_SVG);
+    const t = this.t;
+    const ribbonIconEl = this.addRibbonIcon("innerlevel-peak", t.ribbonTooltip, (_evt) => {
       void this.syncDueNotes();
     });
     ribbonIconEl.addClass("innerlevel-sync-ribbon-icon");
     ribbonIconEl.addEventListener("contextmenu", (evt) => {
       evt.preventDefault();
-      const menu = new import_obsidian.Menu();
+      const menu = new import_obsidian3.Menu();
+      const currentT = this.t;
       menu.addItem(
-        (item) => item.setTitle("Sync today's due notes").setIcon("refresh-cw").onClick(() => {
+        (item) => item.setTitle(currentT.ribbonSyncDue).setIcon("refresh-cw").onClick(() => {
           void this.syncDueNotes();
         })
       );
       menu.addItem(
-        (item) => item.setTitle("Sync today's due notes (by area)").setIcon("folder").onClick(() => {
+        (item) => item.setTitle(currentT.ribbonSyncDueArea).setIcon("folder").onClick(() => {
           void this.syncDueNotes(false, "area");
         })
       );
       menu.addItem(
-        (item) => item.setTitle("Sync today's due notes (individual)").setIcon("file-text").onClick(() => {
+        (item) => item.setTitle(currentT.ribbonSyncDueIndividual).setIcon("file-text").onClick(() => {
           void this.syncDueNotes(false, "individual");
         })
       );
       menu.addItem(
-        (item) => item.setTitle("Resync today's due notes (force)").setIcon("rotate-ccw").onClick(() => {
+        (item) => item.setTitle(currentT.ribbonResyncDue).setIcon("rotate-ccw").onClick(() => {
           void this.syncDueNotes(true);
         })
       );
       menu.addSeparator();
       menu.addItem(
-        (item) => item.setTitle("Capture selection / current note").setIcon("file-plus").onClick(() => {
+        (item) => item.setTitle(currentT.ribbonCaptureCurrent).setIcon("file-plus").onClick(() => {
           void this.captureCurrentNote();
         })
       );
       menu.addItem(
-        (item) => item.setTitle("Open InnerLevel").setIcon("external-link").onClick(() => {
+        (item) => item.setTitle(currentT.ribbonOpenInnerLevel).setIcon("external-link").onClick(() => {
           window.open("https://inner-level-app.vercel.app/", "_blank");
         })
       );
       menu.showAtMouseEvent(evt);
     });
-    this.addCommand({ id: "capture-current-note", name: "Capture selection / current note", callback: () => this.captureCurrentNote() });
-    this.addCommand({ id: "sync-due-today", name: "Sync today's due notes", callback: () => this.syncDueNotes() });
-    this.addCommand({ id: "sync-due-today-area", name: "Sync today's due notes (by area)", callback: () => this.syncDueNotes(false, "area") });
-    this.addCommand({ id: "sync-due-today-individual", name: "Sync today's due notes (individual)", callback: () => this.syncDueNotes(false, "individual") });
-    this.addCommand({ id: "resync-due-today", name: "Resync today's due notes", callback: () => this.syncDueNotes(true) });
-    this.addCommand({ id: "open-innerlevel", name: "Open InnerLevel", callback: () => window.open("https://inner-level-app.vercel.app/", "_blank") });
+    this.addCommand({
+      id: "schedule-review-current",
+      name: t.cmdScheduleReview,
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(import_obsidian3.MarkdownView);
+        if (view && view.file) {
+          if (!checking) {
+            this.openScheduleModal(view.file);
+          }
+          return true;
+        }
+        return false;
+      }
+    });
+    this.addCommand({
+      id: "enable-review-today-current",
+      name: t.cmdEnableReviewToday,
+      checkCallback: (checking) => {
+        const view = this.app.workspace.getActiveViewOfType(import_obsidian3.MarkdownView);
+        if (view && view.file) {
+          if (!checking) {
+            void this.addDefaultReviewMetadata(view.file);
+          }
+          return true;
+        }
+        return false;
+      }
+    });
+    this.addCommand({ id: "capture-current-note", name: t.cmdCaptureCurrent, callback: () => this.captureCurrentNote() });
+    this.addCommand({ id: "sync-due-today", name: t.cmdSyncDue, callback: () => this.syncDueNotes() });
+    this.addCommand({ id: "sync-due-today-area", name: t.cmdSyncDueArea, callback: () => this.syncDueNotes(false, "area") });
+    this.addCommand({ id: "sync-due-today-individual", name: t.cmdSyncDueIndividual, callback: () => this.syncDueNotes(false, "individual") });
+    this.addCommand({ id: "resync-due-today", name: t.cmdResyncDue, callback: () => this.syncDueNotes(true) });
+    this.addCommand({ id: "open-innerlevel", name: t.cmdOpenInnerLevel, callback: () => window.open("https://inner-level-app.vercel.app/", "_blank") });
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        if (file instanceof import_obsidian3.TFile && file.extension === "md") {
+          const currentT = this.t;
+          menu.addSeparator();
+          menu.addItem((item) => {
+            item.setTitle(currentT.menuScheduleReview).setIcon("calendar-plus").onClick(() => this.openScheduleModal(file));
+          });
+          menu.addItem((item) => {
+            item.setTitle(currentT.menuAddReviewToday).setIcon("innerlevel-peak").onClick(() => {
+              void this.addDefaultReviewMetadata(file);
+            });
+          });
+        }
+      })
+    );
+    this.registerEvent(
+      this.app.workspace.on("files-menu", (menu, files) => {
+        const mdFiles = files.filter((f) => f instanceof import_obsidian3.TFile && f.extension === "md");
+        if (mdFiles.length > 1) {
+          const currentT = this.t;
+          menu.addSeparator();
+          menu.addItem((item) => {
+            item.setTitle(currentT.menuBatchReview(mdFiles.length)).setIcon("calendar-plus").onClick(() => this.openBatchScheduleModal(mdFiles));
+          });
+        }
+      })
+    );
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, _editor, view) => {
+        if (view.file) {
+          const file = view.file;
+          const currentT = this.t;
+          menu.addSeparator();
+          menu.addItem((item) => {
+            item.setTitle(currentT.menuScheduleReview).setIcon("calendar-plus").onClick(() => this.openScheduleModal(file));
+          });
+          menu.addItem((item) => {
+            item.setTitle(currentT.menuAddReviewToday).setIcon("innerlevel-peak").onClick(() => {
+              void this.addDefaultReviewMetadata(file);
+            });
+          });
+        }
+      })
+    );
     this.app.workspace.onLayoutReady(() => {
       void this.syncAutomatically();
     });
   }
   onunload() {
     this.client = null;
+  }
+  openScheduleModal(file) {
+    new ScheduleReviewModal(this.app, this, file).open();
+  }
+  openBatchScheduleModal(files) {
+    new BatchScheduleModal(this.app, this, files).open();
+  }
+  async applyReviewMetadata(file, metadata, lang) {
+    await this.app.fileManager.processFrontMatter(file, (fm) => {
+      if ("due_date" in fm) fm["due_date"] = metadata.date;
+      else if ("proxima-revision" in fm) fm["proxima-revision"] = metadata.date;
+      else if ("proxima_revision" in fm) fm["proxima_revision"] = metadata.date;
+      else if ("due" in fm) fm["due"] = metadata.date;
+      else {
+        const key = lang === "es" ? "proxima-revision" : "due_date";
+        fm[key] = metadata.date;
+      }
+      if ("note_type" in fm) fm["note_type"] = metadata.noteType;
+      else if ("tipo_nota" in fm) fm["tipo_nota"] = metadata.noteType;
+      else if ("type" in fm) fm["type"] = metadata.noteType;
+      else if ("tipo" in fm) fm["tipo"] = metadata.noteType;
+      else {
+        const key = lang === "es" ? "tipo_nota" : "note_type";
+        fm[key] = metadata.noteType;
+      }
+      if ("area" in fm) fm["area"] = metadata.area;
+      else if ("cards-deck" in fm) fm["cards-deck"] = metadata.area;
+      else if ("deck" in fm) fm["deck"] = metadata.area;
+      else if ("topic" in fm) fm["topic"] = metadata.area;
+      else {
+        fm["area"] = metadata.area;
+      }
+      if ("review_time" in fm) fm["review_time"] = metadata.duration;
+      else if ("tiempo-repaso" in fm) fm["tiempo-repaso"] = metadata.duration;
+      else if ("duration" in fm) fm["duration"] = metadata.duration;
+      else {
+        const key = lang === "es" ? "tiempo-repaso" : "review_time";
+        fm[key] = metadata.duration;
+      }
+      if ("understanding_level" in fm) fm["understanding_level"] = metadata.level;
+      else if ("nivel-comprension" in fm) fm["nivel-comprension"] = metadata.level;
+      else if ("comprehension" in fm) fm["comprehension"] = metadata.level;
+      else {
+        const key = lang === "es" ? "nivel-comprension" : "understanding_level";
+        fm[key] = metadata.level;
+      }
+    });
+    new import_obsidian3.Notice(this.t.noticeReviewScheduled(file.basename, metadata.date));
+  }
+  async addDefaultReviewMetadata(file) {
+    const lang = this.getLang();
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+    const area = getArea(fm, file) || "General";
+    const mins = Math.round((this.settings.defaultDuration || 0.5) * 60);
+    const duration = `${mins}m`;
+    const defaultType = this.settings.defaultNoteType || (lang === "es" ? "tecnica" : "technical");
+    const today = isoToday3();
+    await this.applyReviewMetadata(
+      file,
+      {
+        date: today,
+        duration,
+        area,
+        noteType: defaultType,
+        level: "pendiente"
+      },
+      lang
+    );
   }
   async loadSettings() {
     const stored = await this.loadData() || {};
@@ -20962,47 +21651,47 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
   async testConnection() {
     try {
       await this.ensureSession();
-      new import_obsidian.Notice("InnerLevel Sync: conexi\xF3n correcta.");
+      new import_obsidian3.Notice(this.t.noticeConnectionOk);
     } catch (error) {
       this.reportError(error);
     }
   }
   async captureCurrentNote() {
     try {
-      const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-      if (!view) throw new Error("Abre una nota Markdown para capturarla.");
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian3.MarkdownView);
+      if (!view) throw new Error(this.t.noticeNoMarkdownOpen);
       const file = view.file;
-      if (!file) throw new Error("La vista activa no tiene un archivo Markdown.");
+      if (!file) throw new Error(this.t.noticeNoMarkdownOpen);
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
       const selection = view.editor.getSelection().trim();
       const description = selection || firstMeaningfulParagraph(view.editor.getValue()) || file.basename;
       const card = this.makeCard(`obsidian-capture-${stableId(file.path)}-${Date.now()}`, file.basename, description, frontmatter, ["obsidian", "quick-seed"], file);
       const { error } = await (await this.ensureSession()).rpc("append_obsidian_card", { p_card: card });
       if (error) throw error;
-      new import_obsidian.Notice(`Capturada: ${file.basename}`);
+      new import_obsidian3.Notice(this.t.noticeCaptured(file.basename));
     } catch (error) {
       this.reportError(error);
     }
   }
   async syncAutomatically() {
-    if (!this.settings.autoSyncToday || this.settings.autoSyncLastRun === isoToday()) return;
+    if (!this.settings.autoSyncToday || this.settings.autoSyncLastRun === isoToday3()) return;
     const synced = await this.syncDueNotes();
     if (synced) {
-      this.settings.autoSyncLastRun = isoToday();
+      this.settings.autoSyncLastRun = isoToday3();
       await this.saveSettings();
     }
   }
   async syncDueNotes(force = false, modeOverride) {
     try {
       const client = await this.ensureSession();
-      const today = isoToday();
+      const today = isoToday3();
       const mode = modeOverride || this.settings.syncMode || "area";
       const dueNotes = this.app.vault.getMarkdownFiles().filter((file) => {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
         return isDue(frontmatter, today, file);
       });
       if (dueNotes.length === 0) {
-        new import_obsidian.Notice("InnerLevel: No hay notas pendientes de repaso para hoy.");
+        new import_obsidian3.Notice(this.t.noticeNoDueNotes);
         return true;
       }
       let existingRemoteCardIds = /* @__PURE__ */ new Set();
@@ -21031,7 +21720,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
         notesToSync.push({ file, frontmatter, body });
       }
       if (notesToSync.length === 0) {
-        new import_obsidian.Notice(`InnerLevel: Las ${dueNotes.length} notas pendientes ya est\xE1n en InnerLevel. Usa 'Resync (force)' para reenviarlas.`);
+        new import_obsidian3.Notice(this.t.noticeNotesAlreadySynced(dueNotes.length));
         return true;
       }
       let syncedCount = 0;
@@ -21095,7 +21784,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
             syncedCount += 1;
           }
         }
-        new import_obsidian.Notice(`Sincronizadas ${syncedCount} notas en ${areaGroups.size} \xE1rea(s).`);
+        new import_obsidian3.Notice(this.t.noticeSyncSuccess(syncedCount, areaGroups.size));
       } else {
         for (const item of notesToSync) {
           const card = this.makeCard(`obsidian-${stableId(item.file.path)}-${today}`, item.file.basename, dueDescription(item.file, item.frontmatter, item.body), item.frontmatter, ["obsidian", "srs", "due-today"], item.file);
@@ -21104,7 +21793,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian.Plugin {
           await this.markSynced(item.file, card.id, today);
           syncedCount += 1;
         }
-        new import_obsidian.Notice(`Sincronizadas ${syncedCount} notas individuales para hoy.`);
+        new import_obsidian3.Notice(this.t.noticeSyncSuccessIndividual(syncedCount));
       }
       return true;
     } catch (error) {
@@ -21138,11 +21827,11 @@ ${content}`);
   reportError(error) {
     const details = error && typeof error === "object" ? error : {};
     const message = [details.message, details.code && `code: ${details.code}`, details.details, details.hint].filter(Boolean).join(" | ") || (error instanceof Error ? error.message : "Error desconocido");
-    new import_obsidian.Notice(`InnerLevel Sync: ${message}`, 1e4);
+    new import_obsidian3.Notice(`InnerLevel Sync: ${message}`, 1e4);
     console.error("[InnerLevel Sync]", error);
   }
 };
-var InnerLevelSettingTab = class extends import_obsidian.PluginSettingTab {
+var InnerLevelSettingTab = class extends import_obsidian3.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -21206,8 +21895,13 @@ var InnerLevelSettingTab = class extends import_obsidian.PluginSettingTab {
       case "email":
       case "password":
       case "dashboardPath":
+      case "defaultNoteType":
         if (typeof value !== "string") throw new TypeError(`Invalid value for ${key}`);
         this.plugin.settings[key] = value;
+        break;
+      case "language":
+        if (value !== "auto" && value !== "en" && value !== "es") throw new TypeError(`Invalid value for ${key}`);
+        this.plugin.settings.language = value;
         break;
       case "syncMode":
         if (value !== "area" && value !== "individual") throw new TypeError(`Invalid value for ${key}`);
@@ -21228,34 +21922,49 @@ var InnerLevelSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    new import_obsidian.Setting(containerEl).setName("Configuration").setHeading();
+    const t = this.plugin.t;
+    new import_obsidian3.Setting(containerEl).setName(t.settingHeadingConfig).setHeading();
     this.textSetting(containerEl, "Supabase URL", "supabaseUrl");
     this.textSetting(containerEl, "Supabase anon key", "supabaseAnonKey");
     this.textSetting(containerEl, "Email", "email");
     this.textSetting(containerEl, "Password", "password");
     this.textSetting(containerEl, "Dashboard path", "dashboardPath");
-    new import_obsidian.Setting(containerEl).setName("Connection").setDesc("Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos.").addButton((button) => button.setButtonText("Sign in / test").setCta().onClick(() => this.plugin.testConnection()));
-    new import_obsidian.Setting(containerEl).setName("Modo de sincronizaci\xF3n / Sync Mode").setDesc("Elige si deseas crear una carta por cada nota individual o agrupar por \xE1rea mostrando el tiempo total acumulado.").addDropdown(
-      (dropdown) => dropdown.addOption("area", "Por \xC1rea / By Area (cartas agrupadas con tiempo total)").addOption("individual", "Individual (una carta por nota)").setValue(this.plugin.settings.syncMode || "area").onChange(async (value) => {
+    new import_obsidian3.Setting(containerEl).setName(t.settingConnectionBtn).setDesc(t.settingConnectionDesc).addButton((button) => button.setButtonText(t.settingConnectionBtn).setCta().onClick(() => this.plugin.testConnection()));
+    new import_obsidian3.Setting(containerEl).setName(t.settingLanguage).setDesc(t.settingLanguageDesc).addDropdown(
+      (dropdown) => dropdown.addOption("auto", t.settingLanguageAuto).addOption("en", "English").addOption("es", "Espa\xF1ol").setValue(this.plugin.settings.language || "auto").onChange(async (val) => {
+        this.plugin.settings.language = val;
+        await this.plugin.saveSettings();
+        this.display();
+      })
+    );
+    new import_obsidian3.Setting(containerEl).setName(t.settingHeadingDefaults).setHeading();
+    new import_obsidian3.Setting(containerEl).setName(t.settingSyncMode).setDesc(t.settingSyncModeDesc).addDropdown(
+      (dropdown) => dropdown.addOption("area", t.settingSyncModeArea).addOption("individual", t.settingSyncModeIndividual).setValue(this.plugin.settings.syncMode || "area").onChange(async (value) => {
         this.plugin.settings.syncMode = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Automatic daily sync").setDesc("Sincroniza una vez al abrir Obsidian, despu\xE9s de cargar el vault.").addToggle((toggle) => toggle.setValue(this.plugin.settings.autoSyncToday).onChange(async (value) => {
+    new import_obsidian3.Setting(containerEl).setName(t.settingAutoSync).setDesc(t.settingAutoSyncDesc).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoSyncToday).onChange(async (value) => {
       this.plugin.settings.autoSyncToday = value;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian.Setting(containerEl).setName("Default duration (hours)").addText((text) => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async (value) => {
+    new import_obsidian3.Setting(containerEl).setName(t.settingDefaultDuration).setDesc(t.settingDefaultDurationDesc).addText((text) => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async (value) => {
       this.plugin.settings.defaultDuration = Number(value) || DEFAULT_SETTINGS.defaultDuration;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian.Setting(containerEl).setName("Default energy cost").addText((text) => text.setValue(String(this.plugin.settings.defaultEnergyCost)).onChange(async (value) => {
+    new import_obsidian3.Setting(containerEl).setName(t.settingDefaultEnergy).setDesc(t.settingDefaultEnergyDesc).addText((text) => text.setValue(String(this.plugin.settings.defaultEnergyCost)).onChange(async (value) => {
       this.plugin.settings.defaultEnergyCost = Number(value) || DEFAULT_SETTINGS.defaultEnergyCost;
       await this.plugin.saveSettings();
     }));
+    new import_obsidian3.Setting(containerEl).setName(t.settingDefaultType).setDesc(t.settingDefaultTypeDesc).addDropdown(
+      (dropdown) => dropdown.addOption("tecnica", "T\xE9cnica / Technical").addOption("nota_estudio", "Nota de Estudio / Study Note").addOption("captura_rapida", "Captura R\xE1pida / Quick Capture").addOption("clase", "Clase / Class").addOption("problema", "Problema / Problem").addOption("permanente", "Permanente / Permanent").setValue(this.plugin.settings.defaultNoteType || "tecnica").onChange(async (value) => {
+        this.plugin.settings.defaultNoteType = value;
+        await this.plugin.saveSettings();
+      })
+    );
   }
   textSetting(containerEl, name, key) {
-    new import_obsidian.Setting(containerEl).setName(name).addText((text) => {
+    new import_obsidian3.Setting(containerEl).setName(name).addText((text) => {
       text.setValue(this.plugin.settings[key]);
       if (key === "password") text.inputEl.type = "password";
       text.onChange(async (value) => {
@@ -21274,12 +21983,14 @@ var SETTING_KEYS = [
   "defaultEnergyCost",
   "dashboardPath",
   "autoSyncToday",
-  "syncMode"
+  "syncMode",
+  "language",
+  "defaultNoteType"
 ];
 function isSettingKey(key) {
   return SETTING_KEYS.includes(key);
 }
-function isoToday() {
+function isoToday3() {
   return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 }
 function authStorageKey(url) {
@@ -21311,7 +22022,7 @@ function getDueDate(frontmatter) {
   return getFMValue(frontmatter, "due_date", "next_review", "due", "proxima-revision", "proxima_revision", "proxima_review");
 }
 function getArea(frontmatter, file) {
-  const explicit = getFMValue(frontmatter, "area", "topic", "subject", "cards-deck", "cards_deck", "deck");
+  const explicit = getFMValue(frontmatter, "area", "topic", "subject", "cards-deck", "cards_deck", "deck", "category", "categoria");
   if (explicit) return explicit;
   if (file && file.parent && file.parent.name && file.parent.name !== "/") {
     return file.parent.name;

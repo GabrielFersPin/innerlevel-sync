@@ -1,5 +1,8 @@
 import { App, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, SettingDefinitionItem, TFile, addIcon, Menu } from 'obsidian';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { detectLanguage, getTranslations, Language, TranslationDict } from './i18n';
+import { ScheduleReviewModal } from './modals/ScheduleReviewModal';
+import { BatchScheduleModal } from './modals/BatchScheduleModal';
 
 const INNERLEVEL_ICON_SVG = `
 <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
@@ -18,7 +21,7 @@ const INNERLEVEL_ICON_SVG = `
 
 export type SyncMode = 'individual' | 'area';
 
-interface InnerLevelSettings {
+export interface InnerLevelSettings {
   supabaseUrl: string;
   supabaseAnonKey: string;
   email: string;
@@ -29,6 +32,8 @@ interface InnerLevelSettings {
   autoSyncToday: boolean;
   autoSyncLastRun?: string;
   syncMode: SyncMode;
+  language: Language;
+  defaultNoteType: string;
 }
 
 const DEFAULT_SETTINGS: InnerLevelSettings = {
@@ -36,6 +41,8 @@ const DEFAULT_SETTINGS: InnerLevelSettings = {
   defaultDuration: 0.5, defaultEnergyCost: 15, dashboardPath: 'Dashboard_General.md',
   autoSyncToday: false,
   syncMode: 'area',
+  language: 'auto',
+  defaultNoteType: 'tecnica',
 };
 
 const DUE_TYPES = new Set([
@@ -49,48 +56,60 @@ export default class InnerLevelSyncPlugin extends Plugin {
   settings!: InnerLevelSettings;
   private client: SupabaseClient | null = null;
 
+  getLang(): 'en' | 'es' {
+    return detectLanguage(this.settings?.language || 'auto');
+  }
+
+  get t(): TranslationDict {
+    return getTranslations(this.getLang());
+  }
+
   async onload(): Promise<void> {
     await this.loadSettings();
     this.addSettingTab(new InnerLevelSettingTab(this.app, this));
 
-    // Register custom InnerLevel mountain icon (matching InnerLevel favicon) and add ribbon icon to the sidebar
+    // Register custom InnerLevel mountain icon (matching InnerLevel favicon)
     addIcon('innerlevel-peak', INNERLEVEL_ICON_SVG);
     addIcon('innerlevel-crystal', INNERLEVEL_ICON_SVG);
 
-    const ribbonIconEl = this.addRibbonIcon('innerlevel-peak', 'InnerLevel: Sync due notes', (_evt: MouseEvent) => {
+    const t = this.t;
+
+    // Sidebar Ribbon Icon
+    const ribbonIconEl = this.addRibbonIcon('innerlevel-peak', t.ribbonTooltip, (_evt: MouseEvent) => {
       void this.syncDueNotes();
     });
     ribbonIconEl.addClass('innerlevel-sync-ribbon-icon');
 
-    // Right-click context menu on sidebar icon for quick access to all sync & capture actions
+    // Right-click context menu on sidebar ribbon icon
     ribbonIconEl.addEventListener('contextmenu', (evt: MouseEvent) => {
       evt.preventDefault();
       const menu = new Menu();
+      const currentT = this.t;
 
       menu.addItem((item) =>
         item
-          .setTitle("Sync today's due notes")
+          .setTitle(currentT.ribbonSyncDue)
           .setIcon('refresh-cw')
           .onClick(() => { void this.syncDueNotes(); })
       );
 
       menu.addItem((item) =>
         item
-          .setTitle("Sync today's due notes (by area)")
+          .setTitle(currentT.ribbonSyncDueArea)
           .setIcon('folder')
           .onClick(() => { void this.syncDueNotes(false, 'area'); })
       );
 
       menu.addItem((item) =>
         item
-          .setTitle("Sync today's due notes (individual)")
+          .setTitle(currentT.ribbonSyncDueIndividual)
           .setIcon('file-text')
           .onClick(() => { void this.syncDueNotes(false, 'individual'); })
       );
 
       menu.addItem((item) =>
         item
-          .setTitle("Resync today's due notes (force)")
+          .setTitle(currentT.ribbonResyncDue)
           .setIcon('rotate-ccw')
           .onClick(() => { void this.syncDueNotes(true); })
       );
@@ -99,14 +118,14 @@ export default class InnerLevelSyncPlugin extends Plugin {
 
       menu.addItem((item) =>
         item
-          .setTitle("Capture selection / current note")
+          .setTitle(currentT.ribbonCaptureCurrent)
           .setIcon('file-plus')
           .onClick(() => { void this.captureCurrentNote(); })
       );
 
       menu.addItem((item) =>
         item
-          .setTitle("Open InnerLevel")
+          .setTitle(currentT.ribbonOpenInnerLevel)
           .setIcon('external-link')
           .onClick(() => { window.open('https://inner-level-app.vercel.app/', '_blank'); })
       );
@@ -114,17 +133,204 @@ export default class InnerLevelSyncPlugin extends Plugin {
       menu.showAtMouseEvent(evt);
     });
 
-    this.addCommand({ id: 'capture-current-note', name: 'Capture selection / current note', callback: () => this.captureCurrentNote() });
-    this.addCommand({ id: 'sync-due-today', name: "Sync today's due notes", callback: () => this.syncDueNotes() });
-    this.addCommand({ id: 'sync-due-today-area', name: "Sync today's due notes (by area)", callback: () => this.syncDueNotes(false, 'area') });
-    this.addCommand({ id: 'sync-due-today-individual', name: "Sync today's due notes (individual)", callback: () => this.syncDueNotes(false, 'individual') });
-    this.addCommand({ id: 'resync-due-today', name: "Resync today's due notes", callback: () => this.syncDueNotes(true) });
-    this.addCommand({ id: 'open-innerlevel', name: 'Open InnerLevel', callback: () => window.open('https://inner-level-app.vercel.app/', '_blank') });
+    // 1. Registered Commands
+    this.addCommand({
+      id: 'schedule-review-current',
+      name: t.cmdScheduleReview,
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view && view.file) {
+          if (!checking) {
+            this.openScheduleModal(view.file);
+          }
+          return true;
+        }
+        return false;
+      }
+    });
+
+    this.addCommand({
+      id: 'enable-review-today-current',
+      name: t.cmdEnableReviewToday,
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view && view.file) {
+          if (!checking) {
+            void this.addDefaultReviewMetadata(view.file);
+          }
+          return true;
+        }
+        return false;
+      }
+    });
+
+    this.addCommand({ id: 'capture-current-note', name: t.cmdCaptureCurrent, callback: () => this.captureCurrentNote() });
+    this.addCommand({ id: 'sync-due-today', name: t.cmdSyncDue, callback: () => this.syncDueNotes() });
+    this.addCommand({ id: 'sync-due-today-area', name: t.cmdSyncDueArea, callback: () => this.syncDueNotes(false, 'area') });
+    this.addCommand({ id: 'sync-due-today-individual', name: t.cmdSyncDueIndividual, callback: () => this.syncDueNotes(false, 'individual') });
+    this.addCommand({ id: 'resync-due-today', name: t.cmdResyncDue, callback: () => this.syncDueNotes(true) });
+    this.addCommand({ id: 'open-innerlevel', name: t.cmdOpenInnerLevel, callback: () => window.open('https://inner-level-app.vercel.app/', '_blank') });
+
+    // 2. Context Menu on individual file (File Explorer & More options)
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu, file) => {
+        if (file instanceof TFile && file.extension === 'md') {
+          const currentT = this.t;
+          menu.addSeparator();
+          menu.addItem((item) => {
+            item
+              .setTitle(currentT.menuScheduleReview)
+              .setIcon('calendar-plus')
+              .onClick(() => this.openScheduleModal(file));
+          });
+          menu.addItem((item) => {
+            item
+              .setTitle(currentT.menuAddReviewToday)
+              .setIcon('innerlevel-peak')
+              .onClick(() => { void this.addDefaultReviewMetadata(file); });
+          });
+        }
+      })
+    );
+
+    // 3. Context Menu on multiple files (Batch selection in File Explorer)
+    this.registerEvent(
+      this.app.workspace.on('files-menu', (menu, files) => {
+        const mdFiles = files.filter((f): f is TFile => f instanceof TFile && f.extension === 'md');
+        if (mdFiles.length > 1) {
+          const currentT = this.t;
+          menu.addSeparator();
+          menu.addItem((item) => {
+            item
+              .setTitle(currentT.menuBatchReview(mdFiles.length))
+              .setIcon('calendar-plus')
+              .onClick(() => this.openBatchScheduleModal(mdFiles));
+          });
+        }
+      })
+    );
+
+    // 4. Editor Context Menu (Right-click inside active note)
+    this.registerEvent(
+      this.app.workspace.on('editor-menu', (menu, _editor, view) => {
+        if (view.file) {
+          const file = view.file;
+          const currentT = this.t;
+          menu.addSeparator();
+          menu.addItem((item) => {
+            item
+              .setTitle(currentT.menuScheduleReview)
+              .setIcon('calendar-plus')
+              .onClick(() => this.openScheduleModal(file));
+          });
+          menu.addItem((item) => {
+            item
+              .setTitle(currentT.menuAddReviewToday)
+              .setIcon('innerlevel-peak')
+              .onClick(() => { void this.addDefaultReviewMetadata(file); });
+          });
+        }
+      })
+    );
+
     this.app.workspace.onLayoutReady(() => { void this.syncAutomatically(); });
   }
 
   onunload(): void {
     this.client = null;
+  }
+
+  openScheduleModal(file: TFile): void {
+    new ScheduleReviewModal(this.app, this, file).open();
+  }
+
+  openBatchScheduleModal(files: TFile[]): void {
+    new BatchScheduleModal(this.app, this, files).open();
+  }
+
+  async applyReviewMetadata(
+    file: TFile,
+    metadata: {
+      date: string;
+      duration: string;
+      area: string;
+      noteType: string;
+      level: string;
+    },
+    lang: 'en' | 'es'
+  ): Promise<void> {
+    await this.app.fileManager.processFrontMatter(file, (fm) => {
+      // 1. Date key: preserve existing key if present, otherwise follow language convention
+      if ('due_date' in fm) fm['due_date'] = metadata.date;
+      else if ('proxima-revision' in fm) fm['proxima-revision'] = metadata.date;
+      else if ('proxima_revision' in fm) fm['proxima_revision'] = metadata.date;
+      else if ('due' in fm) fm['due'] = metadata.date;
+      else {
+        const key = lang === 'es' ? 'proxima-revision' : 'due_date';
+        fm[key] = metadata.date;
+      }
+
+      // 2. Note type key
+      if ('note_type' in fm) fm['note_type'] = metadata.noteType;
+      else if ('tipo_nota' in fm) fm['tipo_nota'] = metadata.noteType;
+      else if ('type' in fm) fm['type'] = metadata.noteType;
+      else if ('tipo' in fm) fm['tipo'] = metadata.noteType;
+      else {
+        const key = lang === 'es' ? 'tipo_nota' : 'note_type';
+        fm[key] = metadata.noteType;
+      }
+
+      // 3. Area key
+      if ('area' in fm) fm['area'] = metadata.area;
+      else if ('cards-deck' in fm) fm['cards-deck'] = metadata.area;
+      else if ('deck' in fm) fm['deck'] = metadata.area;
+      else if ('topic' in fm) fm['topic'] = metadata.area;
+      else {
+        fm['area'] = metadata.area;
+      }
+
+      // 4. Duration key
+      if ('review_time' in fm) fm['review_time'] = metadata.duration;
+      else if ('tiempo-repaso' in fm) fm['tiempo-repaso'] = metadata.duration;
+      else if ('duration' in fm) fm['duration'] = metadata.duration;
+      else {
+        const key = lang === 'es' ? 'tiempo-repaso' : 'review_time';
+        fm[key] = metadata.duration;
+      }
+
+      // 5. Comprehension / Understanding Level key
+      if ('understanding_level' in fm) fm['understanding_level'] = metadata.level;
+      else if ('nivel-comprension' in fm) fm['nivel-comprension'] = metadata.level;
+      else if ('comprehension' in fm) fm['comprehension'] = metadata.level;
+      else {
+        const key = lang === 'es' ? 'nivel-comprension' : 'understanding_level';
+        fm[key] = metadata.level;
+      }
+    });
+
+    new Notice(this.t.noticeReviewScheduled(file.basename, metadata.date));
+  }
+
+  async addDefaultReviewMetadata(file: TFile): Promise<void> {
+    const lang = this.getLang();
+    const fm = (this.app.metadataCache.getFileCache(file)?.frontmatter || {}) as Record<string, unknown>;
+    const area = getArea(fm, file) || 'General';
+    const mins = Math.round((this.settings.defaultDuration || 0.5) * 60);
+    const duration = `${mins}m`;
+    const defaultType = this.settings.defaultNoteType || (lang === 'es' ? 'tecnica' : 'technical');
+    const today = isoToday();
+
+    await this.applyReviewMetadata(
+      file,
+      {
+        date: today,
+        duration,
+        area,
+        noteType: defaultType,
+        level: 'pendiente',
+      },
+      lang
+    );
   }
 
   async loadSettings(): Promise<void> {
@@ -200,7 +406,7 @@ export default class InnerLevelSyncPlugin extends Plugin {
   async testConnection(): Promise<void> {
     try {
       await this.ensureSession();
-      new Notice('InnerLevel Sync: conexión correcta.');
+      new Notice(this.t.noticeConnectionOk);
     } catch (error) {
       this.reportError(error);
     }
@@ -209,16 +415,16 @@ export default class InnerLevelSyncPlugin extends Plugin {
   private async captureCurrentNote(): Promise<void> {
     try {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-      if (!view) throw new Error('Abre una nota Markdown para capturarla.');
+      if (!view) throw new Error(this.t.noticeNoMarkdownOpen);
       const file = view.file;
-      if (!file) throw new Error('La vista activa no tiene un archivo Markdown.');
+      if (!file) throw new Error(this.t.noticeNoMarkdownOpen);
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
       const selection = view.editor.getSelection().trim();
       const description = selection || firstMeaningfulParagraph(view.editor.getValue()) || file.basename;
       const card = this.makeCard(`obsidian-capture-${stableId(file.path)}-${Date.now()}`, file.basename, description, frontmatter, ['obsidian', 'quick-seed'], file);
       const { error } = await (await this.ensureSession()).rpc('append_obsidian_card', { p_card: card });
       if (error) throw error;
-      new Notice(`Capturada: ${file.basename}`);
+      new Notice(this.t.noticeCaptured(file.basename));
     } catch (error) { this.reportError(error); }
   }
 
@@ -231,7 +437,7 @@ export default class InnerLevelSyncPlugin extends Plugin {
     }
   }
 
-  private async syncDueNotes(force = false, modeOverride?: SyncMode): Promise<boolean> {
+  async syncDueNotes(force = false, modeOverride?: SyncMode): Promise<boolean> {
     try {
       const client = await this.ensureSession();
       const today = isoToday();
@@ -242,7 +448,7 @@ export default class InnerLevelSyncPlugin extends Plugin {
       });
 
       if (dueNotes.length === 0) {
-        new Notice('InnerLevel: No hay notas pendientes de repaso para hoy.');
+        new Notice(this.t.noticeNoDueNotes);
         return true;
       }
 
@@ -286,7 +492,7 @@ export default class InnerLevelSyncPlugin extends Plugin {
       }
 
       if (notesToSync.length === 0) {
-        new Notice(`InnerLevel: Las ${dueNotes.length} notas pendientes ya están en InnerLevel. Usa 'Resync (force)' para reenviarlas.`);
+        new Notice(this.t.noticeNotesAlreadySynced(dueNotes.length));
         return true;
       }
 
@@ -360,7 +566,7 @@ export default class InnerLevelSyncPlugin extends Plugin {
           }
         }
 
-        new Notice(`Sincronizadas ${syncedCount} notas en ${areaGroups.size} área(s).`);
+        new Notice(this.t.noticeSyncSuccess(syncedCount, areaGroups.size));
       } else {
         for (const item of notesToSync) {
           const card = this.makeCard(`obsidian-${stableId(item.file.path)}-${today}`, item.file.basename, dueDescription(item.file, item.frontmatter, item.body), item.frontmatter, ['obsidian', 'srs', 'due-today'], item.file);
@@ -369,7 +575,7 @@ export default class InnerLevelSyncPlugin extends Plugin {
           await this.markSynced(item.file, card.id, today);
           syncedCount += 1;
         }
-        new Notice(`Sincronizadas ${syncedCount} notas individuales para hoy.`);
+        new Notice(this.t.noticeSyncSuccessIndividual(syncedCount));
       }
 
       return true;
@@ -470,8 +676,13 @@ class InnerLevelSettingTab extends PluginSettingTab {
       case 'email':
       case 'password':
       case 'dashboardPath':
+      case 'defaultNoteType':
         if (typeof value !== 'string') throw new TypeError(`Invalid value for ${key}`);
         this.plugin.settings[key] = value;
+        break;
+      case 'language':
+        if (value !== 'auto' && value !== 'en' && value !== 'es') throw new TypeError(`Invalid value for ${key}`);
+        this.plugin.settings.language = value;
         break;
       case 'syncMode':
         if (value !== 'area' && value !== 'individual') throw new TypeError(`Invalid value for ${key}`);
@@ -493,31 +704,91 @@ class InnerLevelSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    new Setting(containerEl).setName('Configuration').setHeading();
+    const t = this.plugin.t;
+
+    new Setting(containerEl).setName(t.settingHeadingConfig).setHeading();
     this.textSetting(containerEl, 'Supabase URL', 'supabaseUrl');
     this.textSetting(containerEl, 'Supabase anon key', 'supabaseAnonKey');
     this.textSetting(containerEl, 'Email', 'email');
     this.textSetting(containerEl, 'Password', 'password');
     this.textSetting(containerEl, 'Dashboard path', 'dashboardPath');
+
     new Setting(containerEl)
-      .setName('Connection')
-      .setDesc('Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos.')
-      .addButton(button => button.setButtonText('Sign in / test').setCta().onClick(() => this.plugin.testConnection()));
+      .setName(t.settingConnectionBtn)
+      .setDesc(t.settingConnectionDesc)
+      .addButton(button => button.setButtonText(t.settingConnectionBtn).setCta().onClick(() => this.plugin.testConnection()));
+
+    // Language setting
     new Setting(containerEl)
-      .setName('Modo de sincronización / Sync Mode')
-      .setDesc('Elige si deseas crear una carta por cada nota individual o agrupar por área mostrando el tiempo total acumulado.')
+      .setName(t.settingLanguage)
+      .setDesc(t.settingLanguageDesc)
       .addDropdown(dropdown => dropdown
-        .addOption('area', 'Por Área / By Area (cartas agrupadas con tiempo total)')
-        .addOption('individual', 'Individual (una carta por nota)')
+        .addOption('auto', t.settingLanguageAuto)
+        .addOption('en', 'English')
+        .addOption('es', 'Español')
+        .setValue(this.plugin.settings.language || 'auto')
+        .onChange(async (val) => {
+          this.plugin.settings.language = val as Language;
+          await this.plugin.saveSettings();
+          this.display(); // re-render setting tab with new language
+        })
+      );
+
+    new Setting(containerEl).setName(t.settingHeadingDefaults).setHeading();
+
+    new Setting(containerEl)
+      .setName(t.settingSyncMode)
+      .setDesc(t.settingSyncModeDesc)
+      .addDropdown(dropdown => dropdown
+        .addOption('area', t.settingSyncModeArea)
+        .addOption('individual', t.settingSyncModeIndividual)
         .setValue(this.plugin.settings.syncMode || 'area')
         .onChange(async (value) => {
           this.plugin.settings.syncMode = value as SyncMode;
           await this.plugin.saveSettings();
         })
       );
-    new Setting(containerEl).setName('Automatic daily sync').setDesc('Sincroniza una vez al abrir Obsidian, después de cargar el vault.').addToggle(toggle => toggle.setValue(this.plugin.settings.autoSyncToday).onChange(async value => { this.plugin.settings.autoSyncToday = value; await this.plugin.saveSettings(); }));
-    new Setting(containerEl).setName('Default duration (hours)').addText(text => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async value => { this.plugin.settings.defaultDuration = Number(value) || DEFAULT_SETTINGS.defaultDuration; await this.plugin.saveSettings(); }));
-    new Setting(containerEl).setName('Default energy cost').addText(text => text.setValue(String(this.plugin.settings.defaultEnergyCost)).onChange(async value => { this.plugin.settings.defaultEnergyCost = Number(value) || DEFAULT_SETTINGS.defaultEnergyCost; await this.plugin.saveSettings(); }));
+
+    new Setting(containerEl)
+      .setName(t.settingAutoSync)
+      .setDesc(t.settingAutoSyncDesc)
+      .addToggle(toggle => toggle.setValue(this.plugin.settings.autoSyncToday).onChange(async value => {
+        this.plugin.settings.autoSyncToday = value;
+        await this.plugin.saveSettings();
+      }));
+
+    new Setting(containerEl)
+      .setName(t.settingDefaultDuration)
+      .setDesc(t.settingDefaultDurationDesc)
+      .addText(text => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async value => {
+        this.plugin.settings.defaultDuration = Number(value) || DEFAULT_SETTINGS.defaultDuration;
+        await this.plugin.saveSettings();
+      }));
+
+    new Setting(containerEl)
+      .setName(t.settingDefaultEnergy)
+      .setDesc(t.settingDefaultEnergyDesc)
+      .addText(text => text.setValue(String(this.plugin.settings.defaultEnergyCost)).onChange(async value => {
+        this.plugin.settings.defaultEnergyCost = Number(value) || DEFAULT_SETTINGS.defaultEnergyCost;
+        await this.plugin.saveSettings();
+      }));
+
+    new Setting(containerEl)
+      .setName(t.settingDefaultType)
+      .setDesc(t.settingDefaultTypeDesc)
+      .addDropdown(dropdown => dropdown
+        .addOption('tecnica', 'Técnica / Technical')
+        .addOption('nota_estudio', 'Nota de Estudio / Study Note')
+        .addOption('captura_rapida', 'Captura Rápida / Quick Capture')
+        .addOption('clase', 'Clase / Class')
+        .addOption('problema', 'Problema / Problem')
+        .addOption('permanente', 'Permanente / Permanent')
+        .setValue(this.plugin.settings.defaultNoteType || 'tecnica')
+        .onChange(async (value) => {
+          this.plugin.settings.defaultNoteType = value;
+          await this.plugin.saveSettings();
+        })
+      );
   }
 
   private textSetting(containerEl: HTMLElement, name: string, key: 'supabaseUrl' | 'supabaseAnonKey' | 'email' | 'password' | 'dashboardPath'): void {
@@ -532,6 +803,7 @@ class InnerLevelSettingTab extends PluginSettingTab {
 const SETTING_KEYS = [
   'supabaseUrl', 'supabaseAnonKey', 'email', 'password', 'defaultDuration',
   'defaultEnergyCost', 'dashboardPath', 'autoSyncToday', 'syncMode',
+  'language', 'defaultNoteType',
 ] as const;
 
 function isSettingKey(key: string): key is typeof SETTING_KEYS[number] {
@@ -567,7 +839,7 @@ function getDueDate(frontmatter: Record<string, unknown>): string {
 }
 
 function getArea(frontmatter: Record<string, unknown>, file?: TFile): string {
-  const explicit = getFMValue(frontmatter, 'area', 'topic', 'subject', 'cards-deck', 'cards_deck', 'deck');
+  const explicit = getFMValue(frontmatter, 'area', 'topic', 'subject', 'cards-deck', 'cards_deck', 'deck', 'category', 'categoria');
   if (explicit) return explicit;
   if (file && file.parent && file.parent.name && file.parent.name !== '/') {
     return file.parent.name;
