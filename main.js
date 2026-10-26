@@ -21758,7 +21758,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
             classTypes: ["strategist", "warrior", "creator", "connector", "sage"],
             energyCost,
             duration: Math.round(totalDurationHours * 100) / 100,
-            impact: Math.min(50, items.length * 10),
+            impact: Math.min(100, Math.max(40, items.length * 20)),
             skillBonus: [],
             requirements: {},
             conditions: {},
@@ -21796,7 +21796,8 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
   makeCard(id, name, description, frontmatter, baseTags, file) {
     const timing = timingFor(getReviewTime(frontmatter), this.settings);
     const area = getArea(frontmatter, file);
-    return { id, name, description, type: "action", rarity: "common", classTypes: ["strategist", "warrior", "creator", "connector", "sage"], energyCost: timing.energyCost, duration: timing.duration, impact: 10, skillBonus: [], requirements: {}, conditions: {}, tags: [...baseTags, ...area ? [slug(area)] : []], createdAt: (/* @__PURE__ */ new Date()).toISOString(), forged: true, usageCount: 0, isOnCooldown: false, priority: priorityFor(frontmatter) };
+    const impact = timing.duration <= 0.25 ? 20 : timing.duration <= 0.5 ? 30 : 50;
+    return { id, name, description, type: "action", rarity: "common", classTypes: ["strategist", "warrior", "creator", "connector", "sage"], energyCost: timing.energyCost, duration: timing.duration, impact, skillBonus: [], requirements: {}, conditions: {}, tags: [...baseTags, ...area ? [slug(area)] : []], createdAt: (/* @__PURE__ */ new Date()).toISOString(), forged: true, usageCount: 0, isOnCooldown: false, priority: priorityFor(frontmatter) };
   }
   async markSynced(file, cardId, today) {
     const content = await this.app.vault.read(file);
