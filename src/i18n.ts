@@ -97,6 +97,8 @@ export interface TranslationDict {
   settingDefaultEnergyDesc: string;
   settingDefaultType: string;
   settingDefaultTypeDesc: string;
+  settingFolderFallback: string;
+  settingFolderFallbackDesc: string;
   settingConnectionBtn: string;
   settingConnectionDesc: string;
 }
@@ -189,6 +191,8 @@ export const en: TranslationDict = {
   settingDefaultEnergyDesc: "Fallback energy cost in InnerLevel",
   settingDefaultType: "Default note type",
   settingDefaultTypeDesc: "Used when quickly enabling review for a note",
+  settingFolderFallback: "Folder fallback as area",
+  settingFolderFallbackDesc: "Use parent folder name if 'area' is missing in note frontmatter. Disabled by default to keep unclassified drafts out of study review.",
   settingConnectionBtn: "Test Connection",
   settingConnectionDesc: "Use your existing InnerLevel account. Does not create new users.",
 };
@@ -281,6 +285,8 @@ export const es: TranslationDict = {
   settingDefaultEnergyDesc: "Coste de energía en InnerLevel",
   settingDefaultType: "Tipo de nota por defecto",
   settingDefaultTypeDesc: "Usado al habilitar rápidamente el repaso de una nota",
+  settingFolderFallback: "Usar carpeta si falta el área",
+  settingFolderFallbackDesc: "Usa el nombre de la carpeta si la nota no tiene 'area'. Desactivado por defecto para no sincronizar notas pendientes de clasificar.",
   settingConnectionBtn: "Probar Conexión",
   settingConnectionDesc: "Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos.",
 };

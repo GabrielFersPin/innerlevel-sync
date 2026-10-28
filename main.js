@@ -20867,6 +20867,8 @@ var en = {
   settingDefaultEnergyDesc: "Fallback energy cost in InnerLevel",
   settingDefaultType: "Default note type",
   settingDefaultTypeDesc: "Used when quickly enabling review for a note",
+  settingFolderFallback: "Folder fallback as area",
+  settingFolderFallbackDesc: "Use parent folder name if 'area' is missing in note frontmatter. Disabled by default to keep unclassified drafts out of study review.",
   settingConnectionBtn: "Test Connection",
   settingConnectionDesc: "Use your existing InnerLevel account. Does not create new users."
 };
@@ -20950,6 +20952,8 @@ var es = {
   settingDefaultEnergyDesc: "Coste de energ\xEDa en InnerLevel",
   settingDefaultType: "Tipo de nota por defecto",
   settingDefaultTypeDesc: "Usado al habilitar r\xE1pidamente el repaso de una nota",
+  settingFolderFallback: "Usar carpeta si falta el \xE1rea",
+  settingFolderFallbackDesc: "Usa el nombre de la carpeta si la nota no tiene 'area'. Desactivado por defecto para no sincronizar notas pendientes de clasificar.",
   settingConnectionBtn: "Probar Conexi\xF3n",
   settingConnectionDesc: "Usa tu cuenta existente de InnerLevel. No crea usuarios nuevos."
 };
@@ -21333,7 +21337,8 @@ var DEFAULT_SETTINGS = {
   autoSyncToday: false,
   syncMode: "area",
   language: "auto",
-  defaultNoteType: "tecnica"
+  defaultNoteType: "tecnica",
+  folderFallbackAsArea: false
 };
 var DUE_TYPES = /* @__PURE__ */ new Set([
   // Spanish
@@ -21341,17 +21346,11 @@ var DUE_TYPES = /* @__PURE__ */ new Set([
   "nota_estudio",
   "captura_rapida",
   "permanente",
-  "problema",
-  "clase",
-  "trabajo",
   // English
   "technical",
   "study_note",
   "quick_capture",
-  "permanent",
-  "problem",
-  "class",
-  "work"
+  "permanent"
 ]);
 var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
   constructor() {
@@ -21672,7 +21671,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
       const mode = modeOverride || this.settings.syncMode || "area";
       const dueNotes = this.app.vault.getMarkdownFiles().filter((file) => {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-        return isDue(frontmatter, today, file);
+        return isDue(frontmatter, today, file, this.settings);
       });
       if (dueNotes.length === 0) {
         new import_obsidian3.Notice(this.t.noticeNoDueNotes);
@@ -21702,7 +21701,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
       const notesToSync = [];
       for (const file of dueNotes) {
         const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-        const areaName = getArea(frontmatter, file) || "General";
+        const areaName = getArea(frontmatter, file, this.settings) || "General";
         const expectedCardId = mode === "area" ? `obsidian-area-${slug(areaName)}-${today}` : `obsidian-${stableId(file.path)}-${today}`;
         const isPresentInRemote = existingRemoteCardIds.has(expectedCardId);
         if (!force && frontmatter.innerlevel_last_sync === today && isPresentInRemote) {
@@ -21719,7 +21718,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
       if (mode === "area") {
         const areaGroups = /* @__PURE__ */ new Map();
         for (const item of notesToSync) {
-          const areaName = getArea(item.frontmatter, item.file) || "Sin \xC1rea";
+          const areaName = getArea(item.frontmatter, item.file, this.settings) || "Sin \xC1rea";
           if (!areaGroups.has(areaName)) areaGroups.set(areaName, []);
           areaGroups.get(areaName).push(item);
         }
@@ -21779,7 +21778,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
         new import_obsidian3.Notice(this.t.noticeSyncSuccess(syncedCount, areaGroups.size));
       } else {
         for (const item of notesToSync) {
-          const card = this.makeCard(`obsidian-${stableId(item.file.path)}-${today}`, item.file.basename, dueDescription(item.file, item.frontmatter, item.body), item.frontmatter, ["obsidian", "srs", "due-today"], item.file);
+          const card = this.makeCard(`obsidian-${stableId(item.file.path)}-${today}`, item.file.basename, dueDescription(item.file, item.frontmatter, item.body, this.settings), item.frontmatter, ["obsidian", "srs", "due-today"], item.file);
           const { error } = await client.rpc("append_obsidian_card", { p_card: card });
           if (error) throw error;
           await this.markSynced(item.file, card.id, today);
@@ -21795,7 +21794,7 @@ var InnerLevelSyncPlugin = class extends import_obsidian3.Plugin {
   }
   makeCard(id, name, description, frontmatter, baseTags, file) {
     const timing = timingFor(getReviewTime(frontmatter), this.settings);
-    const area = getArea(frontmatter, file);
+    const area = getArea(frontmatter, file, this.settings);
     const impact = timing.duration <= 0.25 ? 20 : timing.duration <= 0.5 ? 30 : 50;
     return { id, name, description, type: "action", rarity: "common", classTypes: ["strategist", "warrior", "creator", "connector", "sage"], energyCost: timing.energyCost, duration: timing.duration, impact, skillBonus: [], requirements: {}, conditions: {}, tags: [...baseTags, ...area ? [slug(area)] : []], createdAt: (/* @__PURE__ */ new Date()).toISOString(), forged: true, usageCount: 0, isOnCooldown: false, priority: priorityFor(frontmatter) };
   }
@@ -21865,6 +21864,11 @@ var InnerLevelSettingTab = class extends import_obsidian3.PluginSettingTab {
             control: { type: "toggle", key: "autoSyncToday" }
           },
           {
+            name: this.plugin.t.settingFolderFallback,
+            desc: this.plugin.t.settingFolderFallbackDesc,
+            control: { type: "toggle", key: "folderFallbackAsArea" }
+          },
+          {
             name: "Default duration (hours)",
             control: { type: "number", key: "defaultDuration", min: 0, step: 0.25 }
           },
@@ -21901,8 +21905,9 @@ var InnerLevelSettingTab = class extends import_obsidian3.PluginSettingTab {
         this.plugin.settings.syncMode = value;
         break;
       case "autoSyncToday":
+      case "folderFallbackAsArea":
         if (typeof value !== "boolean") throw new TypeError(`Invalid value for ${key}`);
-        this.plugin.settings.autoSyncToday = value;
+        this.plugin.settings[key] = value;
         break;
       case "defaultDuration":
       case "defaultEnergyCost":
@@ -21944,6 +21949,10 @@ var InnerLevelSettingTab = class extends import_obsidian3.PluginSettingTab {
       this.plugin.settings.autoSyncToday = value;
       await this.plugin.saveSettings();
     }));
+    new import_obsidian3.Setting(containerEl).setName(t.settingFolderFallback).setDesc(t.settingFolderFallbackDesc).addToggle((toggle) => toggle.setValue(Boolean(this.plugin.settings.folderFallbackAsArea)).onChange(async (value) => {
+      this.plugin.settings.folderFallbackAsArea = value;
+      await this.plugin.saveSettings();
+    }));
     new import_obsidian3.Setting(containerEl).setName(t.settingDefaultDuration).setDesc(t.settingDefaultDurationDesc).addText((text) => text.setValue(String(this.plugin.settings.defaultDuration)).onChange(async (value) => {
       this.plugin.settings.defaultDuration = Number(value) || DEFAULT_SETTINGS.defaultDuration;
       await this.plugin.saveSettings();
@@ -21981,7 +21990,8 @@ var SETTING_KEYS = [
   "autoSyncToday",
   "syncMode",
   "language",
-  "defaultNoteType"
+  "defaultNoteType",
+  "folderFallbackAsArea"
 ];
 function isSettingKey(key) {
   return SETTING_KEYS.includes(key);
@@ -22017,13 +22027,16 @@ function getNoteType(frontmatter) {
 function getDueDate(frontmatter) {
   return getFMValue(frontmatter, "due_date", "next_review", "due", "proxima-revision", "proxima_revision", "proxima_review");
 }
-function getArea(frontmatter, file) {
-  const explicit = getFMValue(frontmatter, "area", "topic", "subject", "cards-deck", "cards_deck", "deck", "category", "categoria");
+function getExplicitArea(frontmatter) {
+  return getFMValue(frontmatter, "area", "topic", "subject");
+}
+function getArea(frontmatter, file, settings) {
+  const explicit = getExplicitArea(frontmatter) || getFMValue(frontmatter, "cards-deck", "cards_deck", "deck", "category", "categoria");
   if (explicit) return explicit;
-  if (file && file.parent && file.parent.name && file.parent.name !== "/") {
+  if (settings?.folderFallbackAsArea && file && file.parent && file.parent.name && file.parent.name !== "/") {
     return file.parent.name;
   }
-  return "General";
+  return explicit || "General";
 }
 function getStatus(frontmatter) {
   return getFMValue(frontmatter, "status", "state", "estado");
@@ -22047,25 +22060,26 @@ function matchesDueType(rawType) {
   if (!rawType) return false;
   const normalized = normalizeType(rawType);
   if (DUE_TYPES.has(normalized)) return true;
-  return /tecnic|estudio|captura|permanente|problem|clas|trabaj|technic|study|quick/.test(normalized);
+  return /^(tecnica|nota_estudio|captura_rapida|permanente|technical|study_note|quick_capture|permanent)$/.test(normalized);
 }
-function isDue(frontmatter, today, file) {
+function isDue(frontmatter, today, file, settings) {
   const type = getNoteType(frontmatter);
   const due = getDueDate(frontmatter);
   const level = getComprehension(frontmatter).toUpperCase();
   const status = getStatus(frontmatter).toLowerCase();
-  const area = getArea(frontmatter, file);
   const isArchived = status === "\u{1F389} completado / archivado" || status === "archived" || status === "completed" || status === "archivado";
   const isCompleted = level === "COMPLETADO" || level === "COMPLETED";
   if (isArchived || isCompleted) return false;
   const hasValidDueDate = Boolean(due && due <= today && !due.includes("<%"));
   if (!hasValidDueDate) return false;
   const hasType = matchesDueType(type);
-  const hasAreaOrFolder = Boolean(area);
-  return hasType || hasAreaOrFolder;
+  if (!hasType) return false;
+  const explicitArea = getExplicitArea(frontmatter);
+  const hasArea = Boolean(explicitArea || settings?.folderFallbackAsArea && file?.parent?.name && file.parent.name !== "/");
+  return hasArea;
 }
-function dueDescription(file, frontmatter, body) {
-  const area = getArea(frontmatter, file);
+function dueDescription(file, frontmatter, body, settings) {
+  const area = getArea(frontmatter, file, settings);
   const level = getComprehension(frontmatter) || "pendiente";
   const time = getReviewTime(frontmatter) || "sin estimar";
   return [
