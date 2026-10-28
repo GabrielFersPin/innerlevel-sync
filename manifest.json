@@ -1,7 +1,7 @@
 {
   "id": "innerlevel-sync",
   "name": "InnerLevel Sync",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "minAppVersion": "1.5.0",
   "description": "Sync note captures and SRS due study notes into gamified InnerLevel action cards.",
   "author": "GabrielFersPin",
